@@ -51,7 +51,7 @@ check_deps() {
 
     # 检查是否需要更新 pkg（每天只执行一次）
     UPDATE_FLAG="$HOME/.pkg_last_update"
-    if [ ! -f "$UPDATE_FLAG" ] || [ $(find "$UPDATE_FLAG" -mtime +1 2>/dev/null | wc -l) -gt 0 ]; then
+    if [ ! -f "$UPDATE_FLAG" ] || [ $(($(date +%s) - $(stat -c %Y "$UPDATE_FLAG" 2>/dev/null || echo 0))) -gt 86400 ]; then
         log "执行 pkg update"
         echo -e "${YELLOW}更新包列表...${NC}"
         run_cmd pkg update -y
@@ -265,7 +265,7 @@ start_service() {
     echo -e "${GREEN}[6/6] 部署完成！运行 'oclog' 查看日志${NC}"
 
     # 验证服务是否运行
-    if pgrep -f "openclaw gateway" > /dev/null 2>&1; then
+    if command -v pgrep >/dev/null 2>&1 && pgrep -f "openclaw gateway" > /dev/null 2>&1; then
         log "服务验证成功：Openclaw 正在运行"
         echo -e "${GREEN}✅ 服务验证成功：Openclaw 正在运行${NC}"
     else
@@ -379,7 +379,8 @@ PORT=${PORT:-18789}
 
 read -p "请输入自定义 Token (用于安全访问，建议强密码) [留空随机生成]: " TOKEN
 if [ -z "$TOKEN" ]; then
-    TOKEN=$(openssl rand -hex 16 2>/dev/null || echo "random$(date +%s)")
+    # 生成随机 Token
+    TOKEN="token$(date +%s | tail -c 8)"
     echo -e "${GREEN}生成的随机 Token: $TOKEN${NC}"
 fi
 
