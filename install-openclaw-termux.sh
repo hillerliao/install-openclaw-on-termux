@@ -113,14 +113,68 @@ check_deps() {
     echo -e "${BLUE}Node.js 版本: $(node -v)${NC}"
     echo -e "${BLUE}NPM 版本: $(npm -v)${NC}" 
 
-    # 检查 Node.js 版本（必须 22 以上）
+    # 检查 Node.js 版本（推荐使用 LTS 版本 24）
     NODE_VERSION=$(node --version 2>/dev/null | sed 's/v//' | cut -d. -f1)
     if [ -z "$NODE_VERSION" ] || [ "$NODE_VERSION" -lt 22 ]; then
         log "Node.js 版本检查失败: $NODE_VERSION"
         echo -e "${RED}错误：Node.js 版本必须 22 以上，当前版本: $(node --version 2>/dev/null || echo '未知')${NC}"
         exit 1
     fi
-    log "Node.js 版本检查通过"
+    
+    # 警告：如果是 Node.js 25 (非 LTS)，提示可能遇到兼容性问题并提供降级选项
+    if [ "$NODE_VERSION" -eq 25 ]; then
+        log "警告：检测到 Node.js 25 (非 LTS 版本)"
+        echo -e "${YELLOW}⚠️  警告：当前使用 Node.js 25 (Current 版本)，可能遇到原生模块兼容性问题${NC}"
+        echo -e "${YELLOW}    建议降级到 Node.js 24 LTS 版本以获得更好的稳定性${NC}"
+        echo ""
+        read -p "是否降级到 Node.js 24 LTS? (y/n) [默认: y]: " DOWNGRADE_CHOICE
+        DOWNGRADE_CHOICE=${DOWNGRADE_CHOICE:-y}
+        
+        if [ "$DOWNGRADE_CHOICE" = "y" ] || [ "$DOWNGRADE_CHOICE" = "Y" ]; then
+            log "开始降级 Node.js 到 LTS 版本"
+            echo -e "${YELLOW}正在降级 Node.js 到 24 LTS...${NC}"
+            
+            # 先卸载当前版本的 Node.js
+            run_cmd pkg uninstall nodejs -y
+            if [ $? -ne 0 ]; then
+                log "Node.js 卸载失败"
+                echo -e "${RED}错误：Node.js 卸载失败${NC}"
+                exit 1
+            fi
+            
+            # 安装 Node.js LTS 版本
+            run_cmd pkg install nodejs-lts -y
+            if [ $? -ne 0 ]; then
+                log "Node.js LTS 安装失败"
+                echo -e "${RED}错误：Node.js LTS 安装失败${NC}"
+                exit 1
+            fi
+            
+            # 重新获取 Node.js 版本
+            NODE_VERSION=$(node --version 2>/dev/null | sed 's/v//' | cut -d. -f1)
+            echo -e "${GREEN}✅ Node.js 已降级到 $(node --version)${NC}"
+            log "Node.js 降级完成: $(node --version)"
+        else
+            log "用户选择继续使用 Node.js 25"
+            echo -e "${YELLOW}继续安装，但可能遇到兼容性问题${NC}"
+            read -p "是否继续? (y/n) [默认: n]: " CONTINUE_INSTALL
+            CONTINUE_INSTALL=${CONTINUE_INSTALL:-n}
+            if [ "$CONTINUE_INSTALL" != "y" ] && [ "$CONTINUE_INSTALL" != "Y" ]; then
+                log "用户选择退出安装"
+                echo -e "${YELLOW}已取消安装${NC}"
+                exit 0
+            fi
+        fi
+    fi
+    
+    # 提示：如果是 Node.js 22，建议升级到 24 LTS
+    if [ "$NODE_VERSION" -eq 22 ]; then
+        log "Node.js 22 已满足最低要求，但建议升级到 24 LTS"
+        echo -e "${YELLOW}提示：当前使用 Node.js 22，建议升级到 Node.js 24 LTS 以获得长期支持${NC}"
+        echo -e "${YELLOW}      可使用 'pkg upgrade nodejs' 升级${NC}"
+    fi
+    
+    log "Node.js 版本检查通过: $NODE_VERSION"
 
     touch "$BASHRC" 2>/dev/null
 

@@ -54,7 +54,7 @@ curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && bash openclaw-ins
 ### 🔧 自动化配置
 
 - **依赖检查**：自动检测并安装 Node.js、Git、CMake 等必要组件
-- **版本验证**：确保 Node.js 版本 ≥ 22
+- **版本验证**：确保 Node.js 版本 ≥ 22，**推荐 24 LTS**，⚠️ 避免使用 25 (Current)
 - **镜像加速**：自动配置 NPM 镜像源为国内镜像
 - **兼容性补丁**：
   - 修复 Logger 路径（`/tmp/openclaw` → `$HOME/openclaw-logs`）
@@ -88,7 +88,7 @@ curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && bash openclaw-ins
 |------|------|
 | **操作系统** | Android 7.0+ |
 | **Termux** | 最新版本（推荐通过 F-Droid 安装） |
-| **Node.js** | ≥ 22.0.0（脚本会自动检查） |
+| **Node.js** | ≥ 22.0.0，**推荐 24 LTS**（脚本会自动检查并提示） |
 | **存储空间** | ≥ 500MB 可用空间 |
 | **内存** | ≥ 2GB RAM 推荐 |
 | **网络** | 稳定的网络连接（用于下载依赖） |
