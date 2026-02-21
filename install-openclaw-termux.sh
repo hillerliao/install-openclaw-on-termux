@@ -322,6 +322,71 @@ apply_patches() {
         fi
         log "剪贴板补丁应用成功"
     fi
+
+    # 修复 koffi 原生模块（Android 兼容性问题）
+    log "应用 koffi 兼容性补丁"
+    echo -e "${YELLOW}[3.1/6] 正在应用 koffi 原生模块补丁...${NC}"
+
+    KOFFI_DIR="$NPM_GLOBAL/lib/node_modules/openclaw/node_modules/koffi"
+    BASE_CC="$KOFFI_DIR/lib/native/base/base.cc"
+    INDEX_JS="$KOFFI_DIR/index.js"
+
+    # 检查 koffi 目录是否存在
+    if [ -d "$KOFFI_DIR" ]; then
+        # 1. 修复 renameat2：取消 RENAME_NOREPLACE 定义
+        if [ -f "$BASE_CC" ]; then
+            LINE=$(grep -n '#if defined(RENAME_NOREPLACE)' $BASE_CC 2>/dev/null | head -1 | cut -d: -f1)
+            if [ -n "$LINE" ]; then
+                # 检查是否已修复
+                if ! grep -q '#undef RENAME_NOREPLACE' "$BASE_CC"; then
+                    sed -i "${LINE}i #undef RENAME_NOREPLACE" "$BASE_CC"
+                    log "已修复 renameat2 问题"
+                    echo -e "${GREEN}✓ 已修复 renameat2 问题${NC}"
+                else
+                    log "renameat2 已修复，跳过"
+                fi
+            fi
+        fi
+
+        # 2. 添加 android_arm64 的 case 到 index.js
+        if [ -f "$INDEX_JS" ]; then
+            if ! grep -q 'android_arm64' "$INDEX_JS"; then
+                LINE=$(grep -n 'case "linux_arm64"' "$INDEX_JS" 2>/dev/null | head -1 | cut -d: -f1)
+                if [ -n "$LINE" ]; then
+                    BREAK_LINE=$((LINE + 4))
+                    sed -i "${BREAK_LINE}a\\
+    case \\"android_arm64\\":\\
+      {\\
+        native2 = require(\\"./build/koffi/android_arm64/koffi.node\\");\\
+      }\\
+      break;" "$INDEX_JS"
+                    log "已添加 android_arm64 支持"
+                    echo -e "${GREEN}✓ 已添加 android_arm64 支持${NC}"
+                fi
+            else
+                log "android_arm64 支持已存在，跳过"
+            fi
+        fi
+
+        # 3. 编译 koffi
+        if [ -f "$KOFFI_DIR/src/cnoke/cnoke.js" ]; then
+            log "开始编译 koffi"
+            echo -e "${YELLOW}正在编译 koffi 原生模块...${NC}"
+            cd "$KOFFI_DIR"
+            export MAKEFLAGS="-j4"
+            node src/cnoke/cnoke.js -p . -d src/koffi --prebuild 2>&1 | tee -a "$LOG_FILE"
+            if [ $? -eq 0 ]; then
+                log "koffi 编译完成"
+                echo -e "${GREEN}✓ koffi 编译完成${NC}"
+            else
+                log "koffi 编译失败"
+                echo -e "${YELLOW}⚠️ koffi 编译失败，部分功能可能不可用${NC}"
+            fi
+            cd - > /dev/null
+        fi
+    else
+        log "koffi 目录不存在，跳过补丁"
+    fi
 }
 
 setup_autostart() {
