@@ -302,8 +302,6 @@ configure_npm() {
                     fi
                     log "Openclaw 更新完成"
                     echo -e "${GREEN}✅ Openclaw 已更新到 $LATEST_VERSION${NC}"
-                    # 重新应用 koffi stub
-                    apply_koffi_stub
                 else
                     read -p "是否更新到新版本? (y/n) [默认: y]: " UPDATE_CHOICE
                     UPDATE_CHOICE=${UPDATE_CHOICE:-y}
@@ -319,8 +317,6 @@ configure_npm() {
                         fi
                         log "Openclaw 更新完成"
                         echo -e "${GREEN}✅ Openclaw 已更新到 $LATEST_VERSION${NC}"
-                        # 重新应用 koffi stub
-                        apply_koffi_stub
                     else
                         log "用户选择跳过更新"
                         echo -e "${YELLOW}跳过更新，使用当前版本${NC}"
