@@ -387,6 +387,32 @@ apply_patches() {
         echo -e "${GREEN}✓ 所有 /tmp/openclaw 路径已替换为 $HOME/openclaw-logs${NC}"
     fi
 
+    # 修复硬编码的 /bin/npm 路径（Termux 下 npm 位于 $PREFIX/bin/npm）
+    log "搜索并修复硬编码的 /bin/npm 路径"
+    REAL_NPM=$(which npm 2>/dev/null || echo "")
+    if [ -n "$REAL_NPM" ] && [ "$REAL_NPM" != "/bin/npm" ]; then
+        FILES_WITH_NPM=$(grep -rl '"/bin/npm"' dist/ 2>/dev/null || true)
+        if [ -z "$FILES_WITH_NPM" ]; then
+            FILES_WITH_NPM=$(grep -rl "'/bin/npm'" dist/ 2>/dev/null || true)
+        fi
+        if [ -z "$FILES_WITH_NPM" ]; then
+            FILES_WITH_NPM=$(grep -rl '/bin/npm' dist/ 2>/dev/null || true)
+        fi
+        
+        if [ -n "$FILES_WITH_NPM" ]; then
+            log "找到包含 /bin/npm 的文件，替换为 $REAL_NPM"
+            for file in $FILES_WITH_NPM; do
+                log "修复文件: $file"
+                sed -i "s|/bin/npm|${REAL_NPM}|g" "$BASE_DIR/$file"
+            done
+            echo -e "${GREEN}✓ /bin/npm 路径已替换为 $REAL_NPM${NC}"
+        else
+            log "未找到包含 /bin/npm 的文件"
+        fi
+    else
+        log "npm 路径无需修复"
+    fi
+
     # 修复剪贴板
     CLIP_FILE="$BASE_DIR/node_modules/@mariozechner/clipboard/index.js"
     if [ -f "$CLIP_FILE" ]; then
