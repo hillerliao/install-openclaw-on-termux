@@ -472,7 +472,7 @@ termux-wake-lock 2>/dev/null"
         log "跳过自启动（仅写入别名和环境变量）"
     fi
 
-    # 写入配置块（aliases 始终写入，$NPM_BIN 在写入时展开为实际路径）
+    # 写入配置块（函数始终写入，$NPM_BIN 在写入时展开为实际路径）
     cat >> "$BASHRC" <<EOT
 # --- OpenClaw Start ---
 # WARNING: This section contains your access token - keep ~/.bashrc secure
@@ -481,9 +481,53 @@ export TMPDIR=\$HOME/tmp
 export OPENCLAW_GATEWAY_TOKEN=$TOKEN
 export PATH=$NPM_BIN:\$PATH
 ${AUTOSTART_BLOCK}
-alias ocr="pkill -9 -f 'openclaw' 2>/dev/null; tmux kill-session -t openclaw 2>/dev/null; sleep 1; tmux new -d -s openclaw; sleep 1; tmux send-keys -t openclaw \"export PATH=$NPM_BIN:\$PATH TMPDIR=\$HOME/tmp; export OPENCLAW_GATEWAY_TOKEN=$TOKEN; openclaw gateway --bind loopback --port $PORT --token \\\$OPENCLAW_GATEWAY_TOKEN --allow-unconfigured\" C-m"
-alias oclog='tmux attach -t openclaw'
-alias ockill='pkill -9 -f "openclaw" 2>/dev/null; tmux kill-session -t openclaw 2>/dev/null'
+
+# OpenClaw 颜色定义
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+# OpenClaw 服务管理函数
+ocr() {
+    echo -e "\${YELLOW}正在启动/重启 OpenClaw 服务...\${NC}"
+    pkill -9 -f 'openclaw' 2>/dev/null
+    tmux kill-session -t openclaw 2>/dev/null
+    sleep 1
+    tmux new -d -s openclaw
+    sleep 1
+    tmux send-keys -t openclaw "export PATH=$NPM_BIN:\$PATH TMPDIR=\$HOME/tmp; export OPENCLAW_GATEWAY_TOKEN=$TOKEN; openclaw gateway --bind loopback --port $PORT --token \\\$OPENCLAW_GATEWAY_TOKEN --allow-unconfigured" C-m
+    sleep 2
+    if tmux has-session -t openclaw 2>/dev/null; then
+        echo -e "\${GREEN}✅ OpenClaw 服务已启动${NC}"
+        echo -e "\${CYAN}👉 访问地址: http://localhost:$PORT/?token=$TOKEN\${NC}"
+        echo -e "\${BLUE}💡 使用 oclog 查看运行日志${NC}"
+    else
+        echo -e "\${RED}❌ 服务启动失败，请检查日志（openclaw logs）${NC}"
+    fi
+}
+
+oclog() {
+    if tmux has-session -t openclaw 2>/dev/null; then
+        tmux attach -t openclaw
+    else
+        echo -e "\${YELLOW}⚠️  OpenClaw 服务未运行，使用 ocr 启动${NC}"
+    fi
+}
+
+ockill() {
+    echo -e "\${YELLOW}正在停止 OpenClaw 服务...\${NC}"
+    pkill -9 -f "openclaw" 2>/dev/null
+    tmux kill-session -t openclaw 2>/dev/null
+    sleep 1
+    if ! tmux has-session -t openclaw 2>/dev/null && ! pgrep -f "openclaw" > /dev/null; then
+        echo -e "\${GREEN}✅ OpenClaw 服务已停止${NC}"
+    else
+        echo -e "\${RED}❌ 服务停止失败，请手动检查${NC}"
+    fi
+}
 # --- OpenClaw End ---
 EOT
 
@@ -556,7 +600,7 @@ start_service() {
     # 4. 实时验证
     sleep 2
     if tmux has-session -t openclaw 2>/dev/null; then
-        echo -e "${GREEN}✅ tmux 会话已建立！${NC}"
+        echo -e "${GREEN}✅ tmux 会话已建立，Gateway 服务已启动！${NC}"
     else
         echo -e "${RED}❌ 错误：tmux 会话启动后立即崩溃。${NC}"
         echo -e "请检查报错日志: ${YELLOW}cat $LOG_DIR/runtime.log${NC}"
@@ -714,7 +758,7 @@ start_service
 
 echo ""
 echo -e "${GREEN}=========================================="
-echo -e "   ✅ 安装完成！"
+echo -e "✅ OpenClaw 初始安装已完成，待配置！"
 echo -e "==========================================${NC}"
 echo ""
 echo -e "Token（OPENCLAW_GATEWAY_TOKEN）: ${YELLOW}$TOKEN${NC}"
@@ -744,7 +788,7 @@ fi
 
 # 检查服务是否正常启动
 if ! tmux has-session -t openclaw 2>/dev/null; then
-    echo -e "${RED}服务启动失败，请检查日志后手动执行 openclaw onboard${NC}"
+    echo -e "${RED}服务启动失败，请检查日志（openclaw logs）后手动执行 openclaw onboard${NC}"
     log "服务启动失败"
     exit 1
 fi
@@ -774,18 +818,20 @@ show_final_info() {
     else
         echo -e "${YELLOW}后续请手动执行 openclaw onboard 继续配置${NC}"
         if [ "$SHOW_IGNORE_HINT" = "true" ]; then
+            echo ""
             echo -e "${YELLOW}配置过程中，若显示 'Gateway service install not supported on android' 错误，可忽略${NC}。也别使用 openclaw gateway 命令，用 ocr 命令启动。"
         fi
     fi
 }
 
 # 配置引导
-echo -e "${CYAN}按 Enter 键开始配置 OpenClaw...${NC}"
+echo -e "${CYAN}按 Enter 键（“确认”键）开始配置 OpenClaw...${NC}"
 read -r
 
 echo ""
 echo -e "${YELLOW}即将执行 openclaw onboard 命令"
-echo -e "${YELLOW}请准备好大模型 API Key（支持 OpenAI、Anthropic、DeepSeek 等）${NC}"
+echo -e "${YELLOW}请准备好大模型 API Key（推荐 MiniMax、智谱 等）${NC}"
+echo ""
 echo -e "${YELLOW}配置完成后，若显示 'Gateway service install not supported on android' 错误，可忽略${NC}，也别使用 openclaw gateway 命令，用 ocr 命令启动。"
 echo ""
 read -p "是否继续？[Y/n]: " CONTINUE_ONBOARD
@@ -793,7 +839,7 @@ CONTINUE_ONBOARD=${CONTINUE_ONBOARD:-y}
 
 if [[ "$CONTINUE_ONBOARD" =~ ^[Yy]$ ]]; then
     echo ""
-    echo -e "${GREEN}正在启动配置向导...${NC}"
+    echo -e "${GREEN}正在启动 openclaw onboard 命令...${NC}"
     echo ""
     # 捕获 Ctrl+C
     trap 'echo -e "\n${YELLOW}已取消配置${NC}"; show_final_info "false" "true"; log "用户取消配置"' INT
