@@ -750,6 +750,32 @@ if ! tmux has-session -t openclaw 2>/dev/null; then
     exit 1
 fi
 
+# 显示最终信息的函数
+show_final_info() {
+    local CONFIGURED=$1
+    local SHOW_IGNORE_HINT=$2
+    echo ""
+    echo -e "${BLUE}┌─────────────────────────────────────┐${NC}"
+    echo -e "${BLUE}│${NC}  常用命令                           ${BLUE}│${NC}"
+    echo -e "${BLUE}│${NC}  ─────────────────────────────────  ${BLUE}│${NC}"
+    echo -e "${BLUE}│${NC}  ${CYAN}oclog${NC}    - 查看运行状态            ${BLUE}│${NC}"
+    echo -e "${BLUE}│${NC}  ${CYAN}ockill${NC}   - 停止服务                ${BLUE}│${NC}"
+    echo -e "${BLUE}│${NC}  ${CYAN}ocr${NC}      - 重启服务                ${BLUE}│${NC}"
+    echo -e "${BLUE}└─────────────────────────────────────┘${NC}"
+    echo ""
+    if [ "$CONFIGURED" = "true" ]; then
+        echo -e "${GREEN}✅ 配置完成！${NC}"
+        echo ""
+        echo -e "${CYAN}👉 下一步：手机浏览器访问${NC}"
+        echo -e "${WHITE_ON_BLUE} http://localhost:$PORT/?token=$TOKEN ${NC}"
+    else
+        echo -e "${YELLOW}后续请手动执行 openclaw onboard 继续配置${NC}"
+        if [ "$SHOW_IGNORE_HINT" = "true" ]; then
+            echo -e "${YELLOW}提示：若显示 'Gateway service install not supported on android' 错误，可忽略${NC}"
+        fi
+    fi
+}
+
 # 配置引导
 echo -e "${CYAN}按 Enter 键开始配置 OpenClaw...${NC}"
 read -r
@@ -764,14 +790,22 @@ CONTINUE_ONBOARD=${CONTINUE_ONBOARD:-y}
 if [[ "$CONTINUE_ONBOARD" =~ ^[Yy]$ ]]; then
     echo ""
     echo -e "${GREEN}正在启动配置向导...${NC}"
+    echo -e "${YELLOW}提示：配置完成后若显示 'Gateway service install not supported on android' 错误，可忽略${NC}"
+    echo ""
     # 捕获 Ctrl+C
-    trap 'echo -e "\n${YELLOW}已取消配置，后续请手动执行 openclaw onboard 继续${NC}"; log "用户取消配置"' INT
+    trap 'echo -e "\n${YELLOW}已取消配置${NC}"; show_final_info "false" "true"; log "用户取消配置"' INT
     openclaw onboard
     trap - INT
+
+    # 检查配置文件是否存在且有效
+    if [ -f "$HOME/.openclaw/openclaw.json" ] && node -e "JSON.parse(require('fs').readFileSync('$HOME/.openclaw/openclaw.json'))" 2>/dev/null; then
+        show_final_info "true" "false"
+    else
+        show_final_info "false" "true"
+    fi
     log "脚本执行完成"
 else
-    echo ""
-    echo -e "${CYAN}脚本执行完成，后续请手动执行 openclaw onboard 继续配置${NC}"
+    show_final_info "false" "true"
     log "用户跳过配置"
 fi
 
