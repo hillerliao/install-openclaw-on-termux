@@ -557,7 +557,6 @@ start_service() {
     sleep 2
     if tmux has-session -t openclaw 2>/dev/null; then
         echo -e "${GREEN}✅ tmux 会话已建立！${NC}"
-        echo -e "执行 openclaw onboard 命令开始配置"
     else
         echo -e "${RED}❌ 错误：tmux 会话启动后立即崩溃。${NC}"
         echo -e "请检查报错日志: ${YELLOW}cat $LOG_DIR/runtime.log${NC}"
@@ -715,10 +714,10 @@ start_service
 
 echo ""
 echo -e "${GREEN}=========================================="
-echo -e "   ✅ 部署完成！"
+echo -e "   ✅ 安装完成！"
 echo -e "==========================================${NC}"
 echo ""
-echo -e "Token: ${YELLOW}$TOKEN${NC}"
+echo -e "Token（OPENCLAW_GATEWAY_TOKEN）: ${YELLOW}$TOKEN${NC}"
 echo ""
 echo -e "${BLUE}┌─────────────────────────────────────┐${NC}"
 echo -e "${BLUE}│${NC}  常用命令                           ${BLUE}│${NC}"
@@ -765,13 +764,17 @@ show_final_info() {
     echo ""
     if [ "$CONFIGURED" = "true" ]; then
         echo -e "${GREEN}✅ 配置完成！${NC}"
+        if [ "$SHOW_IGNORE_HINT" = "true" ]; then
+            echo ""
+            echo -e "${YELLOW}提示：若显示 'Gateway service install not supported on android' 错误，可忽略${NC}。也别使用 openclaw gateway 命令，用 ocr 命令启动。"
+        fi
         echo ""
         echo -e "${CYAN}👉 下一步：手机浏览器访问${NC}"
         echo -e "${WHITE_ON_BLUE} http://localhost:$PORT/?token=$TOKEN ${NC}"
     else
         echo -e "${YELLOW}后续请手动执行 openclaw onboard 继续配置${NC}"
         if [ "$SHOW_IGNORE_HINT" = "true" ]; then
-            echo -e "${YELLOW}提示：若显示 'Gateway service install not supported on android' 错误，可忽略${NC}"
+            echo -e "${YELLOW}提示：配置完成后，若显示 'Gateway service install not supported on android' 错误，可忽略${NC}。也别使用 openclaw gateway 命令，用 ocr 命令启动。"
         fi
     fi
 }
@@ -781,8 +784,9 @@ echo -e "${CYAN}按 Enter 键开始配置 OpenClaw...${NC}"
 read -r
 
 echo ""
-echo -e "${YELLOW}即将执行 openclaw onboard 命令开始配置 OpenClaw${NC}"
+echo -e "${YELLOW}即将执行 openclaw onboard 命令"
 echo -e "${YELLOW}请准备好大模型 API Key（支持 OpenAI、Anthropic、DeepSeek 等）${NC}"
+echo -e "${YELLOW}配置完成后，若显示 'Gateway service install not supported on android' 错误，可忽略${NC}，也别使用 openclaw gateway 命令，用 ocr 命令启动。"
 echo ""
 read -p "是否继续？[Y/n]: " CONTINUE_ONBOARD
 CONTINUE_ONBOARD=${CONTINUE_ONBOARD:-y}
@@ -790,7 +794,6 @@ CONTINUE_ONBOARD=${CONTINUE_ONBOARD:-y}
 if [[ "$CONTINUE_ONBOARD" =~ ^[Yy]$ ]]; then
     echo ""
     echo -e "${GREEN}正在启动配置向导...${NC}"
-    echo -e "${YELLOW}提示：配置完成后若显示 'Gateway service install not supported on android' 错误，可忽略${NC}"
     echo ""
     # 捕获 Ctrl+C
     trap 'echo -e "\n${YELLOW}已取消配置${NC}"; show_final_info "false" "true"; log "用户取消配置"' INT
@@ -799,11 +802,12 @@ if [[ "$CONTINUE_ONBOARD" =~ ^[Yy]$ ]]; then
 
     # 检查配置文件是否存在且有效
     if [ -f "$HOME/.openclaw/openclaw.json" ] && node -e "JSON.parse(require('fs').readFileSync('$HOME/.openclaw/openclaw.json'))" 2>/dev/null; then
-        show_final_info "true" "false"
+        show_final_info "true" "true"
     else
         show_final_info "false" "true"
     fi
     log "脚本执行完成"
+    
 else
     show_final_info "false" "true"
     log "用户跳过配置"
