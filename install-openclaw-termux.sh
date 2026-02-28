@@ -557,7 +557,7 @@ start_service() {
     sleep 2
     if tmux has-session -t openclaw 2>/dev/null; then
         echo -e "${GREEN}✅ tmux 会话已建立！${NC}"
-        echo -e "立即执行: ${CYAN}oclog${NC} 查看日志；执行 openclaw onboard 进行配置"
+        echo -e "执行 openclaw onboard 命令开始配置"
     else
         echo -e "${RED}❌ 错误：tmux 会话启动后立即崩溃。${NC}"
         echo -e "请检查报错日志: ${YELLOW}cat $LOG_DIR/runtime.log${NC}"
