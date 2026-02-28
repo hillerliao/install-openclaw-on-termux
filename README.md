@@ -48,7 +48,7 @@ Openclaw 是一个强大的 AI 网关服务，本脚本专门为在 Android Term
 ### 🚀 一键部署
 
 ```bash
-curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && bash openclaw-install.sh
+curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh
 ```
 
 ### 🔧 自动化配置
@@ -114,7 +114,7 @@ curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && bash openclaw-ins
 ### 方法一：在线安装（推荐）
 
 ```bash
-curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && bash openclaw-install.sh
+curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh
 ```
 
 ### 方法二：本地运行
@@ -125,7 +125,7 @@ git clone https://github.com/yourusername/install-openclaw-on-termux.sh.git
 cd install-openclaw-on-termux.sh
 
 # 2. 运行安装脚本
-bash install-openclaw-termux.sh
+source install-openclaw-termux.sh
 ```
 
 ### 交互式配置
@@ -150,7 +150,7 @@ bash install-openclaw-termux.sh
 ### 命令行选项
 
 ```bash
-bash install-openclaw-termux.sh [选项]
+source install-openclaw-termux.sh [选项]
 ```
 
 | 选项 | 简写 | 说明 |
@@ -164,19 +164,19 @@ bash install-openclaw-termux.sh [选项]
 
 ```bash
 # 标准安装
-bash install-openclaw-termux.sh
+source install-openclaw-termux.sh
 
 # 详细输出模式安装
-bash install-openclaw-termux.sh --verbose
+source install-openclaw-termux.sh --verbose
 
 # 模拟运行（不实际安装）
-bash install-openclaw-termux.sh --dry-run
+source install-openclaw-termux.sh --dry-run
 
 # 卸载 Openclaw
-bash install-openclaw-termux.sh --uninstall
+source install-openclaw-termux.sh --uninstall
 
 # 组合使用
-bash install-openclaw-termux.sh -v -d  # 详细模式 + 模拟运行
+source install-openclaw-termux.sh -v -d  # 详细模式 + 模拟运行
 ```
 
 ### 安装流程
@@ -486,7 +486,7 @@ tail -n 50 $HOME/openclaw-logs/runtime.log
 ### 方法一：使用脚本卸载
 
 ```bash
-bash install-openclaw-termux.sh --uninstall
+source install-openclaw-termux.sh --uninstall
 ```
 
 **卸载内容**：
@@ -770,7 +770,7 @@ cp ~/openclaw-backup/.bashrc ~/.bashrc
 cp -r ~/openclaw-backup/.npm-global ~/.npm-global
 
 # 3. 重新运行脚本
-bash install-openclaw-termux.sh
+source install-openclaw-termux.sh
 ```
 </details>
 

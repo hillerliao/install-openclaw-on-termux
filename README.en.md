@@ -44,7 +44,7 @@ Openclaw is a powerful AI gateway service. This script is specifically designed 
 ### 🚀 One-Click Deployment
 
 ```bash
-curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && bash openclaw-install.sh
+curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh
 ```
 
 ### 🔧 Automated Configuration
@@ -110,7 +110,7 @@ The script will automatically install the following Termux components (if not in
 ### Method 1: Online Installation (Recommended)
 
 ```bash
-curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && bash openclaw-install.sh
+curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh
 ```
 
 ### Method 2: Local Installation
@@ -121,7 +121,7 @@ git clone https://github.com/yourusername/install-openclaw-on-termux.sh.git
 cd install-openclaw-on-termux.sh
 
 # 2. Run the installation script
-bash install-openclaw-termux.sh
+source install-openclaw-termux.sh
 ```
 
 ### Interactive Configuration
@@ -146,7 +146,7 @@ Do you need to enable auto-start on boot? (y/n) [default: y]:
 ### Command Line Options
 
 ```bash
-bash install-openclaw-termux.sh [options]
+source install-openclaw-termux.sh [options]
 ```
 
 | Option | Short | Description |
@@ -160,19 +160,19 @@ bash install-openclaw-termux.sh [options]
 
 ```bash
 # Standard installation
-bash install-openclaw-termux.sh
+source install-openclaw-termux.sh
 
 # Verbose mode installation
-bash install-openclaw-termux.sh --verbose
+source install-openclaw-termux.sh --verbose
 
 # Dry run (no actual installation)
-bash install-openclaw-termux.sh --dry-run
+source install-openclaw-termux.sh --dry-run
 
 # Uninstall Openclaw
-bash install-openclaw-termux.sh --uninstall
+source install-openclaw-termux.sh --uninstall
 
 # Combined usage
-bash install-openclaw-termux.sh -v -d  # Verbose mode + dry run
+source install-openclaw-termux.sh -v -d  # Verbose mode + dry run
 ```
 
 ### Installation Process
@@ -482,7 +482,7 @@ tail -n 50 $HOME/openclaw-logs/runtime.log
 ### Method 1: Uninstall Using Script
 
 ```bash
-bash install-openclaw-termux.sh --uninstall
+source install-openclaw-termux.sh --uninstall
 ```
 
 **Uninstall Content**:
@@ -766,7 +766,7 @@ cp ~/openclaw-backup/.bashrc ~/.bashrc
 cp -r ~/openclaw-backup/.npm-global ~/.npm-global
 
 # 3. Re-run script
-bash install-openclaw-termux.sh
+source install-openclaw-termux.sh
 ```
 </details>
 

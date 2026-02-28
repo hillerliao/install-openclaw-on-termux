@@ -613,6 +613,9 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+WHITE_ON_BLUE='\033[44;37;1m'
 NC='\033[0m'
 
 # 检查终端是否支持颜色
@@ -623,6 +626,9 @@ else
     BLUE=''
     YELLOW=''
     RED=''
+    CYAN=''
+    BOLD=''
+    WHITE_ON_BLUE=''
     NC=''
 fi
 
@@ -706,6 +712,66 @@ apply_patches
 setup_autostart
 activate_wakelock
 start_service
-echo -e "${GREEN}脚本执行完成！${NC}，token为：$TOKEN  。常用命令：执行 oclog 查看运行状态； ockill 停止服务；ocr 重启服务。"
-log "脚本执行完成"
+
+echo ""
+echo -e "${GREEN}=========================================="
+echo -e "   ✅ 部署完成！"
+echo -e "==========================================${NC}"
+echo ""
+echo -e "Token: ${YELLOW}$TOKEN${NC}"
+echo ""
+echo -e "${BLUE}┌─────────────────────────────────────┐${NC}"
+echo -e "${BLUE}│${NC}  常用命令                           ${BLUE}│${NC}"
+echo -e "${BLUE}│${NC}  ─────────────────────────────────  ${BLUE}│${NC}"
+echo -e "${BLUE}│${NC}  ${CYAN}oclog${NC}    - 查看运行状态            ${BLUE}│${NC}"
+echo -e "${BLUE}│${NC}  ${CYAN}ockill${NC}   - 停止服务                ${BLUE}│${NC}"
+echo -e "${BLUE}│${NC}  ${CYAN}ocr${NC}      - 重启服务                ${BLUE}│${NC}"
+echo -e "${BLUE}└─────────────────────────────────────┘${NC}"
+echo ""
+
+# dry-run 模式跳过配置引导
+if [ $DRY_RUN -eq 1 ]; then
+    echo -e "${YELLOW}模拟运行完成，未执行实际安装${NC}"
+    log "模拟运行完成"
+    exit 0
+fi
+
+# 更新模式跳过配置引导
+if [ $FORCE_UPDATE -eq 1 ]; then
+    echo -e "${GREEN}更新完成！${NC}"
+    log "更新完成"
+    exit 0
+fi
+
+# 检查服务是否正常启动
+if ! tmux has-session -t openclaw 2>/dev/null; then
+    echo -e "${RED}服务启动失败，请检查日志后手动执行 openclaw onboard${NC}"
+    log "服务启动失败"
+    exit 1
+fi
+
+# 配置引导
+echo -e "${CYAN}按 Enter 键开始配置 OpenClaw...${NC}"
+read -r
+
+echo ""
+echo -e "${YELLOW}即将执行 openclaw onboard 命令开始配置 OpenClaw${NC}"
+echo -e "${YELLOW}请准备好大模型 API Key（支持 OpenAI、Anthropic、DeepSeek 等）${NC}"
+echo ""
+read -p "是否继续？[Y/n]: " CONTINUE_ONBOARD
+CONTINUE_ONBOARD=${CONTINUE_ONBOARD:-y}
+
+if [[ "$CONTINUE_ONBOARD" =~ ^[Yy]$ ]]; then
+    echo ""
+    echo -e "${GREEN}正在启动配置向导...${NC}"
+    # 捕获 Ctrl+C
+    trap 'echo -e "\n${YELLOW}已取消配置，后续请手动执行 openclaw onboard 继续${NC}"; log "用户取消配置"' INT
+    openclaw onboard
+    trap - INT
+    log "脚本执行完成"
+else
+    echo ""
+    echo -e "${CYAN}脚本执行完成，后续请手动执行 openclaw onboard 继续配置${NC}"
+    log "用户跳过配置"
+fi
 
