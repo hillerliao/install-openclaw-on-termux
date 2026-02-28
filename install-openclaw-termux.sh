@@ -774,7 +774,7 @@ show_final_info() {
     else
         echo -e "${YELLOW}后续请手动执行 openclaw onboard 继续配置${NC}"
         if [ "$SHOW_IGNORE_HINT" = "true" ]; then
-            echo -e "${YELLOW}提示：配置完成后，若显示 'Gateway service install not supported on android' 错误，可忽略${NC}。也别使用 openclaw gateway 命令，用 ocr 命令启动。"
+            echo -e "${YELLOW}配置过程中，若显示 'Gateway service install not supported on android' 错误，可忽略${NC}。也别使用 openclaw gateway 命令，用 ocr 命令启动。"
         fi
     fi
 }
