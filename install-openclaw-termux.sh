@@ -87,6 +87,59 @@ trap 'echo -e "${RED}错误：脚本执行失败，请检查上述输出${NC}"' 
 # Openclaw Termux Deployment Script v2.0
 # ==========================================
 
+# 颜色定义
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+WHITE_ON_BLUE='\033[44;37;1m'
+NC='\033[0m'
+
+# 检查终端是否支持颜色
+if [ -t 1 ] && [ "$(tput colors 2>/dev/null || echo 0)" -ge 8 ]; then
+    : # 支持，保持颜色
+else
+    GREEN=''
+    BLUE=''
+    YELLOW=''
+    RED=''
+    CYAN=''
+    BOLD=''
+    WHITE_ON_BLUE=''
+    NC=''
+fi
+
+# 定义常用路径变量
+BASHRC="$HOME/.bashrc"
+NPM_GLOBAL="$HOME/.npm-global"
+NPM_BIN="$NPM_GLOBAL/bin"
+LOG_DIR="$HOME/openclaw-logs"
+LOG_FILE="$LOG_DIR/install.log"
+
+# 创建日志目录（防止日志函数在目录不存在时报错）
+mkdir -p "$LOG_DIR" 2>/dev/null || true
+
+# 日志函数
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >> "$LOG_FILE"
+}
+
+# 命令执行函数（支持 dry-run）
+run_cmd() {
+    if [ $VERBOSE -eq 1 ]; then
+        echo "[VERBOSE] 执行: $@"
+    fi
+    log "执行命令: $@"
+    if [ $DRY_RUN -eq 1 ]; then
+        echo "[DRY-RUN] 跳过: $@"
+        return 0
+    else
+        "$@"
+    fi
+}
+
 # Function definitions
 
 apply_koffi_stub() {
@@ -151,8 +204,8 @@ check_deps() {
     for dep in "${DEPS[@]}"; do
         cmd=$dep
         if [ "$dep" = "nodejs-lts" ]; then cmd="node"; fi
-        if ! command -v $cmd &> /dev/null; then
-            MISSING_DEPS+=($dep)
+        if ! command -v "$cmd" &> /dev/null; then
+            MISSING_DEPS+=("$dep")
         fi
     done
 
@@ -373,19 +426,26 @@ apply_patches() {
     log "开始应用补丁"
     echo -e "${YELLOW}[3/6] 正在应用 Android 兼容性补丁...${NC}"
 
+    # 检查 BASE_DIR 是否存在
+    if [ ! -d "$BASE_DIR" ]; then
+        log "BASE_DIR 不存在: $BASE_DIR"
+        echo -e "${RED}错误：Openclaw 安装目录不存在${NC}"
+        exit 1
+    fi
+
     # 修复所有包含 /tmp/openclaw 路径的文件
     log "搜索并修复所有硬编码的 /tmp/openclaw 路径"
     
     # 在 openclaw 目录中搜索所有包含 /tmp/openclaw 的文件
-    cd "$BASE_DIR"
+    cd "$BASE_DIR" || { log "无法进入 $BASE_DIR"; exit 1; }
     FILES_WITH_TMP=$(grep -rl "/tmp/openclaw" dist/ 2>/dev/null || true)
     
     if [ -n "$FILES_WITH_TMP" ]; then
         log "找到需要修复的文件"
-        for file in $FILES_WITH_TMP; do
+        while IFS= read -r file; do
             log "修复文件: $file"
             node -e "const fs = require('fs'); const file = '$BASE_DIR/$file'; let c = fs.readFileSync(file, 'utf8'); c = c.replace(/\/tmp\/openclaw/g, process.env.HOME + '/openclaw-logs'); fs.writeFileSync(file, c);"
-        done
+        done <<< "$FILES_WITH_TMP"
         log "所有文件修复完成"
     else
         log "未找到需要修复的文件"
@@ -417,10 +477,10 @@ apply_patches() {
         
         if [ -n "$FILES_WITH_NPM" ]; then
             log "找到包含 /bin/npm 的文件，替换为 $REAL_NPM"
-            for file in $FILES_WITH_NPM; do
+            while IFS= read -r file; do
                 log "修复文件: $file"
                 sed -i "s|/bin/npm|${REAL_NPM}|g" "$BASE_DIR/$file"
-            done
+            done <<< "$FILES_WITH_NPM"
             echo -e "${GREEN}✓ /bin/npm 路径已替换为 $REAL_NPM${NC}"
         else
             log "未找到包含 /bin/npm 的文件"
@@ -614,7 +674,7 @@ uninstall_openclaw() {
 
     # 停止服务
     echo -e "${YELLOW}停止服务...${NC}"
-    run_cmd pkill -9 node 2>/dev/null || true
+    run_cmd pkill -9 -f "openclaw" 2>/dev/null || true
     run_cmd tmux kill-session -t openclaw 2>/dev/null || true
     log "服务已停止"
 
@@ -651,58 +711,6 @@ uninstall_openclaw() {
 }
 
 # 主脚本
-
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-CYAN='\033[0;36m'
-BOLD='\033[1m'
-WHITE_ON_BLUE='\033[44;37;1m'
-NC='\033[0m'
-
-# 检查终端是否支持颜色
-if [ -t 1 ] && [ "$(tput colors 2>/dev/null || echo 0)" -ge 8 ]; then
-    : # 支持，保持颜色
-else
-    GREEN=''
-    BLUE=''
-    YELLOW=''
-    RED=''
-    CYAN=''
-    BOLD=''
-    WHITE_ON_BLUE=''
-    NC=''
-fi
-
-# 定义常用路径变量
-BASHRC="$HOME/.bashrc"
-NPM_GLOBAL="$HOME/.npm-global"
-NPM_BIN="$NPM_GLOBAL/bin"
-LOG_DIR="$HOME/openclaw-logs"
-LOG_FILE="$LOG_DIR/install.log"
-
-# 创建日志目录（防止日志函数在目录不存在时报错）
-mkdir -p "$LOG_DIR" 2>/dev/null || true
-
-# 日志函数
-log() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >> "$LOG_FILE"
-}
-
-# 命令执行函数（支持 dry-run）
-run_cmd() {
-    if [ $VERBOSE -eq 1 ]; then
-        echo "[VERBOSE] 执行: $@"
-    fi
-    log "执行命令: $@"
-    if [ $DRY_RUN -eq 1 ]; then
-        echo "[DRY-RUN] 跳过: $@"
-        return 0
-    else
-        "$@"
-    fi
-}
 
 clear
 if [ $DRY_RUN -eq 1 ]; then
