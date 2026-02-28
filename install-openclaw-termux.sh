@@ -3,7 +3,7 @@
 # Openclaw Termux Deployment Script v2.0
 # ==========================================
 #
-# Usage: curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && bash openclaw-install.sh [options]
+# Usage: curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh [options]
 #
 # Options:
 #   --help, -h       Show help information
@@ -13,18 +13,30 @@
 #   --update, -U     Force update Openclaw to latest version without prompting
 #
 # Examples:
-#   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && bash openclaw-install.sh
-#   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && bash openclaw-install.sh --verbose
-#   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && bash openclaw-install.sh --dry-run
-#   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && bash openclaw-install.sh --uninstall
-#   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && bash openclaw-install.sh --update
+#   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh
+#   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh --verbose
+#   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh --dry-run
+#   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh --uninstall
+#   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh --update
 #
-# Note: For direct local execution, use: bash install-openclaw-termux.sh [options]
+# Note: For direct local execution, use: source install-openclaw-termux.sh [options]
 #
 # ==========================================
 
-set -e
-set -o pipefail
+# 注意：此脚本建议使用 source 方式执行，以便别名和环境变量立即生效
+# 检测执行方式
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    echo "⚠️  提示: 建议使用 source 方式执行，以便别名立即生效"
+    echo "   执行: source $0 [选项]"
+    echo ""
+    read -p "继续使用 bash 方式执行? (y/n) [默认: y]: " CONTINUE_BASH
+    CONTINUE_BASH=${CONTINUE_BASH:-y}
+    if [[ "$CONTINUE_BASH" != "y" && "$CONTINUE_BASH" != "Y" ]]; then
+        echo "已取消，请使用: source $0"
+        exit 0
+    fi
+    echo ""
+fi
 
 # 解析命令行选项
 VERBOSE=0
@@ -50,13 +62,15 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --help|-h)
-            echo "用法: $0 [选项]"
+            echo "用法: source $0 [选项]"
             echo "选项:"
             echo "  --verbose, -v    启用详细输出"
             echo "  --dry-run, -d    模拟运行，不执行实际命令"
             echo "  --uninstall, -u  卸载 Openclaw 和相关配置"
             echo "  --update, -U     强制更新到最新版本"
             echo "  --help, -h       显示此帮助信息"
+            echo ""
+            echo "注意: 建议使用 source 方式执行，以便别名立即生效"
             exit 0
             ;;
         *)
@@ -67,7 +81,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-trap 'echo -e "${RED}错误：脚本执行失败，请检查上述输出${NC}"; exit 1' ERR
+trap 'echo -e "${RED}错误：脚本执行失败，请检查上述输出${NC}"' ERR
 
 # ==========================================
 # Openclaw Termux Deployment Script v2.0
@@ -543,7 +557,7 @@ start_service() {
     sleep 2
     if tmux has-session -t openclaw 2>/dev/null; then
         echo -e "${GREEN}✅ tmux 会话已建立！${NC}"
-        echo -e "请退出终端重新进入后执行: ${CYAN}oclog${NC} 查看日志；执行 openclaw onboard 进行配置"
+        echo -e "立即执行: ${CYAN}oclog${NC} 查看日志；执行 openclaw onboard 进行配置"
     else
         echo -e "${RED}❌ 错误：tmux 会话启动后立即崩溃。${NC}"
         echo -e "请检查报错日志: ${YELLOW}cat $LOG_DIR/runtime.log${NC}"
