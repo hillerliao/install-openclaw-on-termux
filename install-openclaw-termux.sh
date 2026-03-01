@@ -705,16 +705,10 @@ uninstall_openclaw() {
     run_cmd npm uninstall -g openclaw 2>/dev/null || true
     log "Openclaw 包已卸载"
 
-    # 删除日志和 npm 全局目录
-    echo -e "${YELLOW}删除日志目录和 npm 全局目录...${NC}"
-    run_cmd rm -rf "$LOG_DIR" 2>/dev/null || true
-    run_cmd rm -rf "$NPM_GLOBAL" 2>/dev/null || true
-    log "日志目录和 npm 全局目录已删除"
-
     # 删除更新标志
     run_cmd rm -f "$HOME/.pkg_last_update" 2>/dev/null || true
 
-    # 备份并删除 openclaw.json
+    # 备份并删除 openclaw.json（在删除日志目录之前）
     if [ -f "$HOME/.openclaw/openclaw.json" ]; then
         echo -e "${YELLOW}备份 openclaw.json...${NC}"
         run_cmd cp "$HOME/.openclaw/openclaw.json" "$HOME/.openclaw/openclaw.json.$(date +%Y%m%d_%H%M%S).bak"
@@ -723,8 +717,15 @@ uninstall_openclaw() {
         log "已删除 openclaw.json"
     fi
 
-    echo -e "${GREEN}卸载完成！${NC}"
+    # 记录完成日志（在删除日志目录之前）
     log "卸载完成"
+
+    # 最后删除日志和 npm 全局目录
+    echo -e "${YELLOW}删除日志目录和 npm 全局目录...${NC}"
+    run_cmd rm -rf "$LOG_DIR" 2>/dev/null || true
+    run_cmd rm -rf "$NPM_GLOBAL" 2>/dev/null || true
+
+    echo -e "${GREEN}卸载完成！${NC}"
 }
 
 # 主脚本
