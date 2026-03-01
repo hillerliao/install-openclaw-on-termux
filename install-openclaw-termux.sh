@@ -24,19 +24,11 @@
 # ==========================================
 
 # 注意：此脚本建议使用 source 方式执行，以便别名和环境变量立即生效
-# 检测执行方式
+# 检测执行方式，非 source 方式时在脚本结束时提示
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    echo "⚠️  提示: 建议使用 source 方式执行，以便别名立即生效"
-    echo "   执行: source $0 [选项]"
-    echo ""
-    read -p "继续使用 bash 方式执行? (y/n) [默认: y]: " CONTINUE_BASH
-    CONTINUE_BASH=${CONTINUE_BASH:-y}
-    if [[ "$CONTINUE_BASH" != "y" && "$CONTINUE_BASH" != "Y" ]]; then
-        echo "已取消，请使用: source $0"
-        exit 0
-    fi
-    echo ""
+    _NEED_PROMPT=1
 fi
+trap 'if [ "$_NEED_PROMPT" = "1" ]; then echo ""; echo "⚠️  请执行以下命令使别名生效:"; echo "   source ~/.bashrc"; fi' EXIT
 
 # 解析命令行选项
 VERBOSE=0
@@ -664,6 +656,7 @@ start_service() {
     
     log "服务指令已发送"
     echo -e "${GREEN}[6/6] 部署指令发送完毕${NC}"
+    echo ""
     
     # 4. 实时验证
     sleep 2
@@ -848,7 +841,7 @@ read -r
 echo ""
 echo -e "即将执行 ${YELLOW}openclaw onboard ${NC}命令"
 echo ""
-echo -e "请准备好 ${YELLOW}大模型 API Key ${NC}（推荐 MiniMax、智谱 等）"
+echo -e "请准备好 ${YELLOW}大模型 API Key ${NC}，中国大陆推荐 MiniMax（minimax-cn）、智谱（z-ai） 等"
 echo ""
 echo -e "配置完成后，若显示 ${YELLOW}'Gateway service install not supported on android'${NC} 错误，可${CYAN}忽略${NC}。"
 echo -e "${YELLOW}别使用 openclaw gateway 命令${NC}。用 ${CYAN}ocr${NC} 命令启动。"
