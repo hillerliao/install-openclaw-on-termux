@@ -680,8 +680,15 @@ uninstall_openclaw() {
 
     # 删除别名和配置
     echo -e "${YELLOW}删除别名和配置...${NC}"
-    run_cmd sed -i '/# --- [Oo]pen[Cc]law Start ---/,/# --- [Oo]pen[Cc]law End ---/d' "$BASHRC"
-    run_cmd sed -i '/export PATH=.*\.npm-global\/bin/d' "$BASHRC"
+    # 使用固定文本匹配，避免正则表达式问题
+    if grep -q "# --- OpenClaw Start ---" "$BASHRC" 2>/dev/null; then
+        sed -i '/# --- OpenClaw Start ---/,/# --- OpenClaw End ---/d' "$BASHRC"
+        log "已删除 OpenClaw 配置块"
+    else
+        log "未找到 OpenClaw 配置块"
+    fi
+    # 删除可能残留的 PATH 配置
+    sed -i '/export PATH=.*\.npm-global\/bin/d' "$BASHRC" 2>/dev/null || true
     log "别名和配置已删除"
 
     # 恢复备份的 bashrc
