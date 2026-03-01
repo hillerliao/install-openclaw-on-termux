@@ -826,7 +826,8 @@ show_final_info() {
         echo -e "${GREEN}✅ 配置完成！${NC}"
         if [ "$SHOW_IGNORE_HINT" = "true" ]; then
             echo ""
-            echo -e "${YELLOW}提示：若显示 'Gateway service install not supported on android' 错误，可忽略${NC}。也别使用 openclaw gateway 命令，用 ocr 命令启动。"
+            echo -e "若显示 ${YELLOW}'Gateway service install not supported on android'${NC} 错误，可${CYAN}忽略${NC}。"
+            echo -e "${YELLOW}别使用 openclaw gateway 命令${NC}。用 ${CYAN}ocr${NC} 命令启动。"
         fi
         echo ""
         echo -e "${CYAN}👉 下一步：手机浏览器访问${NC}"
@@ -841,14 +842,16 @@ show_final_info() {
 }
 
 # 配置引导
-echo -e "${CYAN}按 Enter 键（“确认”键）开始配置 OpenClaw...${NC}"
+echo -e "按 ${YELLOW}确认${NC} 键开始配置 OpenClaw..."
 read -r
 
 echo ""
-echo -e "${YELLOW}即将执行 openclaw onboard 命令"
-echo -e "${YELLOW}请准备好大模型 API Key（推荐 MiniMax、智谱 等）${NC}"
+echo -e "即将执行 ${YELLOW}openclaw onboard ${NC}命令"
 echo ""
-echo -e "${YELLOW}配置完成后，若显示 'Gateway service install not supported on android' 错误，可忽略${NC}，也别使用 openclaw gateway 命令，用 ocr 命令启动。"
+echo -e "请准备好 ${YELLOW}大模型 API Key ${NC}（推荐 MiniMax、智谱 等）"
+echo ""
+echo -e "配置完成后，若显示 ${YELLOW}'Gateway service install not supported on android'${NC} 错误，可${CYAN}忽略${NC}。"
+echo -e "${YELLOW}别使用 openclaw gateway 命令${NC}。用 ${CYAN}ocr${NC} 命令启动。"
 echo ""
 read -p "是否继续？[Y/n]: " CONTINUE_ONBOARD
 CONTINUE_ONBOARD=${CONTINUE_ONBOARD:-y}
@@ -875,3 +878,5 @@ else
     log "用户跳过配置"
 fi
 
+# 回到主目录
+cd ~
