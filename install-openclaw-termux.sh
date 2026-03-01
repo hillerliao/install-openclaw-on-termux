@@ -704,11 +704,11 @@ uninstall_openclaw() {
     run_cmd npm uninstall -g openclaw 2>/dev/null || true
     log "Openclaw 包已卸载"
 
-    # 删除日志和配置目录
-    echo -e "${YELLOW}删除日志和配置目录...${NC}"
+    # 删除日志和 npm 全局目录
+    echo -e "${YELLOW}删除日志目录和 npm 全局目录...${NC}"
     run_cmd rm -rf "$LOG_DIR" 2>/dev/null || true
     run_cmd rm -rf "$NPM_GLOBAL" 2>/dev/null || true
-    log "日志和配置目录已删除"
+    log "日志目录和 npm 全局目录已删除"
 
     # 删除更新标志
     run_cmd rm -f "$HOME/.pkg_last_update" 2>/dev/null || true
@@ -731,7 +731,8 @@ uninstall_openclaw() {
 # 卸载模式直接执行
 if [ $UNINSTALL -eq 1 ]; then
     uninstall_openclaw
-    exit 0
+    # source 模式下 return 只退出脚本，exit 会退出整个 shell
+    [[ "${BASH_SOURCE[0]}" == "${0}" ]] && exit 0 || return 0
 fi
 
 clear
