@@ -28,7 +28,7 @@
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     _NEED_PROMPT=1
 fi
-trap 'if [ "$_NEED_PROMPT" = "1" ]; then echo ""; echo "⚠️  请执行以下命令使别名生效:"; echo "   source ~/.bashrc"; fi' EXIT
+trap 'if [ "$_NEED_PROMPT" = "1" ]; then echo ""; echo "⚠️  请执行以下命令使别名（ocr-重启、ockill-强制关闭、oclog-查看日志）生效:"; echo "   source ~/.bashrc"; fi' EXIT
 
 # 解析命令行选项
 VERBOSE=0
@@ -62,7 +62,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --update, -U     强制更新到最新版本"
             echo "  --help, -h       显示此帮助信息"
             echo ""
-            echo "注意: 建议使用 source 方式执行，以便别名立即生效"
+            echo "注意: 建议使用 source 方式执行，以便别名（ocr-重启、ockill-强制关闭、oclog-查看日志）立即生效"
             exit 0
             ;;
         *)
