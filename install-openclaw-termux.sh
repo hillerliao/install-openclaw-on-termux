@@ -556,6 +556,7 @@ ocr() {
     tmux send-keys -t openclaw "export PATH=$NPM_BIN:\$PATH TMPDIR=\$HOME/tmp OPENCLAW_GATEWAY_TOKEN=\$OPENCLAW_GATEWAY_TOKEN; openclaw gateway --bind loopback --port $PORT --token \\\$OPENCLAW_GATEWAY_TOKEN --allow-unconfigured" C-m
     sleep 2
     if tmux has-session -t openclaw 2>/dev/null; then
+        echo ""
         echo -e "\${GREEN}✅ OpenClaw 服务已启动\${NC}"
         echo ""
         echo -e "\${CYAN}📖 使用方法:\${NC}"
@@ -901,6 +902,22 @@ if [[ "$CONTINUE_ONBOARD" =~ ^[Yy]$ ]]; then
         TOKEN_REF='${OPENCLAW_GATEWAY_TOKEN}'
         if node -e "const fs=require('fs');const p=process.env.HOME+'/.openclaw/openclaw.json';const c=JSON.parse(fs.readFileSync(p,'utf8'));c.gateway=c.gateway||{};c.gateway.auth=c.gateway.auth||{};c.gateway.auth.token='$TOKEN_REF';fs.writeFileSync(p,JSON.stringify(c,null,2));console.log('Token updated');"; then
             log "已更新 openclaw.json 中的 token 为环境变量引用"
+            # 重启 gateway 使新 token 生效
+            echo -e "${YELLOW}正在重启 Gateway 服务以应用新 Token...${NC}"
+            pkill -9 -f 'openclaw' 2>/dev/null || true
+            tmux kill-session -t openclaw 2>/dev/null || true
+            sleep 1
+            tmux new -d -s openclaw
+            sleep 1
+            tmux send-keys -t openclaw "export PATH=$NPM_BIN:\$PATH TMPDIR=\$HOME/tmp OPENCLAW_GATEWAY_TOKEN=$TOKEN; openclaw gateway --bind loopback --port $PORT --token \$OPENCLAW_GATEWAY_TOKEN --allow-unconfigured 2>&1 | tee $LOG_DIR/runtime.log" C-m
+            sleep 2
+            if tmux has-session -t openclaw 2>/dev/null; then
+                log "Gateway 重启成功"
+                echo -e "${GREEN}✅ Gateway 服务已重启，Token 配置已生效${NC}"
+            else
+                log "Gateway 重启失败"
+                echo -e "${RED}⚠️ Gateway 重启失败，请手动执行 ocr 命令${NC}"
+            fi
         else
             log "警告: 更新 openclaw.json 中的 token 失败"
         fi
