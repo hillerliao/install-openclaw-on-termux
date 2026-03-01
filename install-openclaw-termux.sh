@@ -900,7 +900,7 @@ if [[ "$CONTINUE_ONBOARD" =~ ^[Yy]$ ]]; then
     if [ -f "$HOME/.openclaw/openclaw.json" ] && node -e "JSON.parse(require('fs').readFileSync('$HOME/.openclaw/openclaw.json'))" 2>/dev/null; then
         # 确保 openclaw.json 中的 token 使用环境变量引用
         TOKEN_REF='${OPENCLAW_GATEWAY_TOKEN}'
-        if node -e "const fs=require('fs');const p=process.env.HOME+'/.openclaw/openclaw.json';const c=JSON.parse(fs.readFileSync(p,'utf8'));c.gateway=c.gateway||{};c.gateway.auth=c.gateway.auth||{};c.gateway.auth.token='$TOKEN_REF';fs.writeFileSync(p,JSON.stringify(c,null,2));console.log('Token updated');"; then
+        if node -e "const fs=require('fs');const p=process.env.HOME+'/.openclaw/openclaw.json';const c=JSON.parse(fs.readFileSync(p,'utf8'));c.gateway=c.gateway||{};c.gateway.auth=c.gateway.auth||{};c.gateway.auth.token='$TOKEN_REF';fs.writeFileSync(p,JSON.stringify(c,null,2));"; then
             log "已更新 openclaw.json 中的 token 为环境变量引用"
             # 重启 gateway 使新 token 生效
             echo -e "${YELLOW}正在重启 Gateway 服务以应用新 Token...${NC}"
