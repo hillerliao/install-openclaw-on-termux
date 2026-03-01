@@ -739,12 +739,29 @@ else
     fi
 fi
 
-read -p "请输入自定义 Token (用于安全访问，建议强密码) [留空随机生成]: " TOKEN
-if [ -z "$TOKEN" ]; then
-    # 生成随机 Token
-    RANDOM_PART=$(date +%s | md5sum | cut -c 1-8)
-    TOKEN="token$RANDOM_PART"
-    echo -e "${GREEN}生成的随机 Token: $TOKEN${NC}"
+# 检查是否已存在 Token
+if [ -n "$OPENCLAW_GATEWAY_TOKEN" ]; then
+    echo -e "${GREEN}检测到已存在的 Token: ${OPENCLAW_GATEWAY_TOKEN:0:8}...${NC}"
+    read -p "是否使用现有 Token? (y/n) [默认: y]: " USE_EXISTING
+    USE_EXISTING=${USE_EXISTING:-y}
+    if [ "$USE_EXISTING" = "y" ] || [ "$USE_EXISTING" = "Y" ]; then
+        TOKEN="$OPENCLAW_GATEWAY_TOKEN"
+        echo -e "${GREEN}✓ 使用现有 Token${NC}"
+    else
+        read -p "请输入自定义 Token (用于安全访问，建议强密码) [留空随机生成]: " TOKEN
+        if [ -z "$TOKEN" ]; then
+            RANDOM_PART=$(date +%s | md5sum | cut -c 1-8)
+            TOKEN="token$RANDOM_PART"
+            echo -e "${GREEN}生成的随机 Token: $TOKEN${NC}"
+        fi
+    fi
+else
+    read -p "请输入自定义 Token (用于安全访问，建议强密码) [留空随机生成]: " TOKEN
+    if [ -z "$TOKEN" ]; then
+        RANDOM_PART=$(date +%s | md5sum | cut -c 1-8)
+        TOKEN="token$RANDOM_PART"
+        echo -e "${GREEN}生成的随机 Token: $TOKEN${NC}"
+    fi
 fi
 
 read -p "是否需要开启开机自启动? (y/n) [默认: y]: " AUTO_START
@@ -862,17 +879,9 @@ if [[ "$CONTINUE_ONBOARD" =~ ^[Yy]$ ]]; then
     # 检查配置文件是否存在且有效
     if [ -f "$HOME/.openclaw/openclaw.json" ] && node -e "JSON.parse(require('fs').readFileSync('$HOME/.openclaw/openclaw.json'))" 2>/dev/null; then
         # 确保 openclaw.json 中的 token 使用环境变量引用
-        if node -e "
-const fs = require('fs');
-const configPath = process.env.HOME + '/.openclaw/openclaw.json';
-const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-config.gateway = config.gateway || {};
-config.gateway.auth = config.gateway.auth || {};
-config.gateway.auth.token = '\${OPENCLAW_GATEWAY_TOKEN}';
-fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-console.log('已同步 token 环境变量引用到 openclaw.json');
-"; then
-            log "已更新 openclaw.json 中的 token"
+        TOKEN_REF='${OPENCLAW_GATEWAY_TOKEN}'
+        if node -e "const fs=require('fs');const p=process.env.HOME+'/.openclaw/openclaw.json';const c=JSON.parse(fs.readFileSync(p,'utf8'));c.gateway=c.gateway||{};c.gateway.auth=c.gateway.auth||{};c.gateway.auth.token='$TOKEN_REF';fs.writeFileSync(p,JSON.stringify(c,null,2));console.log('Token updated');"; then
+            log "已更新 openclaw.json 中的 token 为环境变量引用"
         else
             log "警告: 更新 openclaw.json 中的 token 失败"
         fi
