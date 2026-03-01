@@ -655,13 +655,12 @@ start_service() {
     tmux send-keys -t openclaw "export PATH=$NPM_BIN:\$PATH TMPDIR=$HOME/tmp; export OPENCLAW_GATEWAY_TOKEN=$TOKEN; openclaw gateway --bind loopback --port $PORT --token \\\$OPENCLAW_GATEWAY_TOKEN --allow-unconfigured 2>&1 | tee $LOG_DIR/runtime.log" C-m
     
     log "服务指令已发送"
-    echo -e "${GREEN}[6/6] 部署指令发送完毕${NC}"
     echo ""
     
     # 4. 实时验证
     sleep 2
     if tmux has-session -t openclaw 2>/dev/null; then
-        echo -e "${GREEN}✅ tmux 会话已建立，Gateway 服务已启动！${NC}"
+        echo -e "${GREEN}[6/6] ✅ tmux 会话已建立，Gateway 服务已启动！${NC}"
     else
         echo -e "${RED}❌ 错误：tmux 会话启动后立即崩溃。${NC}"
         echo -e "请检查报错日志: ${YELLOW}cat $LOG_DIR/runtime.log${NC}"
@@ -770,7 +769,7 @@ echo -e "${GREEN}=========================================="
 echo -e "✅ OpenClaw 初始安装已完成，待配置！"
 echo -e "==========================================${NC}"
 echo ""
-echo -e "Token（OPENCLAW_GATEWAY_TOKEN）: ${YELLOW}$TOKEN${NC}"
+echo -e "OPENCLAW_GATEWAY_TOKEN: ${YELLOW}$TOKEN${NC}"
 echo ""
 echo -e "${BLUE}┌─────────────────────────────────────┐${NC}"
 echo -e "${BLUE}│${NC}  常用命令                           ${BLUE}│${NC}"
@@ -820,7 +819,8 @@ show_final_info() {
         if [ "$SHOW_IGNORE_HINT" = "true" ]; then
             echo ""
             echo -e "若显示 ${YELLOW}'Gateway service install not supported on android'${NC} 错误，可${CYAN}忽略${NC}。"
-            echo -e "${YELLOW}别使用 openclaw gateway 命令${NC}。用 ${CYAN}ocr${NC} 命令启动。"
+            echo ""
+            echo -e "${YELLOW}不要使用 openclaw gateway 命令${NC}，请用 ${CYAN}ocr${NC} 命令启动 Gateway 。"
         fi
         echo ""
         echo -e "${CYAN}👉 下一步：手机浏览器访问${NC}"
@@ -835,16 +835,17 @@ show_final_info() {
 }
 
 # 配置引导
-echo -e "按 ${YELLOW}确认${NC} 键开始配置 OpenClaw..."
+echo -e "请按 ${YELLOW}确认${NC} 键（Enter键）开始配置 OpenClaw 。"
 read -r
 
 echo ""
-echo -e "即将执行 ${YELLOW}openclaw onboard ${NC}命令"
+echo -e "即将执行 ${YELLOW}openclaw onboard ${NC}命令..."
 echo ""
 echo -e "请准备好 ${YELLOW}大模型 API Key ${NC}，中国大陆推荐 MiniMax（minimax-cn）、智谱（z-ai） 等"
 echo ""
 echo -e "配置完成后，若显示 ${YELLOW}'Gateway service install not supported on android'${NC} 错误，可${CYAN}忽略${NC}。"
-echo -e "${YELLOW}别使用 openclaw gateway 命令${NC}。用 ${CYAN}ocr${NC} 命令启动。"
+echo ""
+echo -e "${YELLOW}⚠️不要使用 openclaw gateway 命令${NC}。用 ${CYAN}ocr${NC} 命令启动。"
 echo ""
 read -p "是否继续？[Y/n]: " CONTINUE_ONBOARD
 CONTINUE_ONBOARD=${CONTINUE_ONBOARD:-y}
