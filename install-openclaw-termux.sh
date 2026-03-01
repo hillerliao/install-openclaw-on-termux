@@ -713,11 +713,26 @@ uninstall_openclaw() {
     # 删除更新标志
     run_cmd rm -f "$HOME/.pkg_last_update" 2>/dev/null || true
 
+    # 备份并删除 openclaw.json
+    if [ -f "$HOME/.openclaw/openclaw.json" ]; then
+        echo -e "${YELLOW}备份 openclaw.json...${NC}"
+        run_cmd cp "$HOME/.openclaw/openclaw.json" "$HOME/.openclaw/openclaw.json.$(date +%Y%m%d_%H%M%S).bak"
+        log "已备份 openclaw.json"
+        run_cmd rm -f "$HOME/.openclaw/openclaw.json"
+        log "已删除 openclaw.json"
+    fi
+
     echo -e "${GREEN}卸载完成！${NC}"
     log "卸载完成"
 }
 
 # 主脚本
+
+# 卸载模式直接执行
+if [ $UNINSTALL -eq 1 ]; then
+    uninstall_openclaw
+    exit 0
+fi
 
 clear
 if [ $DRY_RUN -eq 1 ]; then
@@ -775,11 +790,6 @@ read -p "是否需要开启开机自启动? (y/n) [默认: y]: " AUTO_START
 AUTO_START=${AUTO_START:-y}
 
 # 执行步骤
-if [ $UNINSTALL -eq 1 ]; then
-    uninstall_openclaw
-    exit 0
-fi
-
 log "脚本开始执行，用户配置: 端口=$PORT, Token=$TOKEN, 自启动=$AUTO_START"
 check_deps
 configure_npm
