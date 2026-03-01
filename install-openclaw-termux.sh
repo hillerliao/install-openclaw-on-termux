@@ -316,7 +316,10 @@ configure_npm() {
         echo -e "${RED}错误：NPM 前缀设置失败${NC}"
         exit 1
     fi
-    grep -qxF "export PATH=$NPM_BIN:$PATH" "$BASHRC" || echo "export PATH=$NPM_BIN:$PATH" >> "$BASHRC"
+    # 检查是否已存在正确的 PATH 设置（避免重复追加）
+    if ! grep -q "export PATH=$NPM_BIN:" "$BASHRC" 2>/dev/null; then
+        echo "export PATH=$NPM_BIN:\$PATH" >> "$BASHRC"
+    fi
     export PATH="$NPM_BIN:$PATH"
 
     # 在安装前创建必要的目录（Termux 兼容性处理）
@@ -561,11 +564,16 @@ ocr() {
     tmux send-keys -t openclaw "export PATH=$NPM_BIN:\$PATH TMPDIR=\$HOME/tmp; export OPENCLAW_GATEWAY_TOKEN=$TOKEN; openclaw gateway --bind loopback --port $PORT --token \\\$OPENCLAW_GATEWAY_TOKEN --allow-unconfigured" C-m
     sleep 2
     if tmux has-session -t openclaw 2>/dev/null; then
-        echo -e "\${GREEN}✅ OpenClaw 服务已启动${NC}"
-        echo -e "\${CYAN}👉 访问地址: http://localhost:$PORT/?token=$TOKEN\${NC}"
-        echo -e "\${BLUE}💡 使用 oclog 查看运行日志${NC}"
+        echo -e "\${GREEN}✅ OpenClaw 服务已启动\${NC}"
+        echo ""
+        echo -e "\${CYAN}📖 使用方法:\${NC}"
+        echo "   1. 本手机浏览器打开: http://localhost:$PORT/?token=$TOKEN"
+        echo "   2. 或运行命令: openclaw tui"
+        echo "   3. 或使用 Telegram 机器人(若已配置)"
+        echo ""
+        echo -e "\${BLUE}💡 oclog 查看日志 | ockill 停止服务\${NC}"
     else
-        echo -e "\${RED}❌ 服务启动失败，请检查日志（openclaw logs）${NC}"
+        echo -e "\${RED}❌ 服务启动失败，请检查日志（openclaw logs）\${NC}"
     fi
 }
 
@@ -573,7 +581,7 @@ oclog() {
     if tmux has-session -t openclaw 2>/dev/null; then
         tmux attach -t openclaw
     else
-        echo -e "\${YELLOW}⚠️  OpenClaw 服务未运行，使用 ocr 启动${NC}"
+        echo -e "\${YELLOW}⚠️  OpenClaw 服务未运行，使用 ocr 启动\${NC}"
     fi
 }
 
@@ -583,9 +591,9 @@ ockill() {
     tmux kill-session -t openclaw 2>/dev/null
     sleep 1
     if ! tmux has-session -t openclaw 2>/dev/null && ! pgrep -f "openclaw" > /dev/null; then
-        echo -e "\${GREEN}✅ OpenClaw 服务已停止${NC}"
+        echo -e "\${GREEN}✅ OpenClaw 服务已停止\${NC}"
     else
-        echo -e "\${RED}❌ 服务停止失败，请手动检查${NC}"
+        echo -e "\${RED}❌ 服务停止失败，请手动检查\${NC}"
     fi
 }
 # --- OpenClaw End ---
