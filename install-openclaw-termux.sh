@@ -770,7 +770,7 @@ if [ -n "$OPENCLAW_GATEWAY_TOKEN" ]; then
         TOKEN="$OPENCLAW_GATEWAY_TOKEN"
         echo -e "${GREEN}✓ 使用现有 Token${NC}"
     else
-        read -p "请输入自定义 Token (用于安全访问，建议强密码) [留空随机生成]: " TOKEN
+        read -p "请输入自定义 Token (OPENCLAW_GATEWAY_TOKEN，用于安全访问，建议强密码) [留空随机生成]: " TOKEN
         if [ -z "$TOKEN" ]; then
             RANDOM_PART=$(date +%s | md5sum | cut -c 1-8)
             TOKEN="token$RANDOM_PART"
