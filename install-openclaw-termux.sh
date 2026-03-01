@@ -842,6 +842,7 @@ show_final_info() {
         echo ""
         echo -e "${CYAN}👉 下一步：手机浏览器访问${NC}"
         echo -e "${WHITE_ON_BLUE} http://localhost:$PORT/?token=$TOKEN ${NC}"
+        echo -e "或运行命令 openclaw tui"
     else
         echo -e "${YELLOW}后续请手动执行 openclaw onboard 继续配置${NC}"
         if [ "$SHOW_IGNORE_HINT" = "true" ]; then
