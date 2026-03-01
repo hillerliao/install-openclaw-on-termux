@@ -553,13 +553,13 @@ ocr() {
     sleep 1
     tmux new -d -s openclaw
     sleep 1
-    tmux send-keys -t openclaw "export PATH=$NPM_BIN:\$PATH TMPDIR=\$HOME/tmp; export OPENCLAW_GATEWAY_TOKEN=$TOKEN; openclaw gateway --bind loopback --port $PORT --token \\\$OPENCLAW_GATEWAY_TOKEN --allow-unconfigured" C-m
+    tmux send-keys -t openclaw "export PATH=$NPM_BIN:\$PATH TMPDIR=\$HOME/tmp OPENCLAW_GATEWAY_TOKEN=\$OPENCLAW_GATEWAY_TOKEN; openclaw gateway --bind loopback --port $PORT --token \\\$OPENCLAW_GATEWAY_TOKEN --allow-unconfigured" C-m
     sleep 2
     if tmux has-session -t openclaw 2>/dev/null; then
         echo -e "\${GREEN}✅ OpenClaw 服务已启动\${NC}"
         echo ""
         echo -e "\${CYAN}📖 使用方法:\${NC}"
-        echo "   1. 本手机浏览器打开: http://localhost:$PORT/?token=$TOKEN"
+        echo "   1. 本手机浏览器打开: http://localhost:$PORT/?token=\$OPENCLAW_GATEWAY_TOKEN"
         echo "   2. 或运行命令: openclaw tui"
         echo "   3. 或使用 Telegram 机器人(若已配置)"
         echo ""
@@ -652,7 +652,7 @@ start_service() {
     sleep 1
     
     # 将输出重定向到一个临时文件，如果 tmux 崩了也能看到报错
-    tmux send-keys -t openclaw "export PATH=$NPM_BIN:\$PATH TMPDIR=$HOME/tmp; export OPENCLAW_GATEWAY_TOKEN=$TOKEN; openclaw gateway --bind loopback --port $PORT --token \\\$OPENCLAW_GATEWAY_TOKEN --allow-unconfigured 2>&1 | tee $LOG_DIR/runtime.log" C-m
+    tmux send-keys -t openclaw "export PATH=$NPM_BIN:\$PATH TMPDIR=$HOME/tmp OPENCLAW_GATEWAY_TOKEN=\$OPENCLAW_GATEWAY_TOKEN; openclaw gateway --bind loopback --port $PORT --token \\\$OPENCLAW_GATEWAY_TOKEN --allow-unconfigured 2>&1 | tee $LOG_DIR/runtime.log" C-m
     
     log "服务指令已发送"
     echo ""
