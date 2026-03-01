@@ -852,7 +852,7 @@ CONTINUE_ONBOARD=${CONTINUE_ONBOARD:-y}
 
 if [[ "$CONTINUE_ONBOARD" =~ ^[Yy]$ ]]; then
     echo ""
-    echo -e "${GREEN}正在启动 openclaw onboard 命令...${NC}"
+    echo -e "正在启动 openclaw onboard 命令..."
     echo ""
     # 捕获 Ctrl+C
     trap 'echo -e "\n${YELLOW}已取消配置${NC}"; show_final_info "false" "true"; log "用户取消配置"' INT
@@ -861,6 +861,18 @@ if [[ "$CONTINUE_ONBOARD" =~ ^[Yy]$ ]]; then
 
     # 检查配置文件是否存在且有效
     if [ -f "$HOME/.openclaw/openclaw.json" ] && node -e "JSON.parse(require('fs').readFileSync('$HOME/.openclaw/openclaw.json'))" 2>/dev/null; then
+        # 确保 openclaw.json 中的 token 使用环境变量引用
+        node -e "
+const fs = require('fs');
+const configPath = process.env.HOME + '/.openclaw/openclaw.json';
+const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+config.gateway = config.gateway || {};
+config.gateway.auth = config.gateway.auth || {};
+config.gateway.auth.token = '\${OPENCLAW_GATEWAY_TOKEN}';
+fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+console.log('已同步 token 环境变量引用到 openclaw.json');
+" 2>/dev/null
+        log "已更新 openclaw.json 中的 token"
         show_final_info "true" "true"
     else
         show_final_info "false" "true"
