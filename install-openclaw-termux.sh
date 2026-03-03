@@ -358,7 +358,7 @@ configure_npm() {
                 if [ $FORCE_UPDATE -eq 1 ]; then
                     log "强制更新模式，直接更新"
                     echo -e "${YELLOW}正在更新 Openclaw...${NC}"
-                    run_cmd env NODE_LLAMA_CPP_SKIP_DOWNLOAD=true npm i -g openclaw --ignore-scripts
+                    run_cmd env NODE_LLAMA_CPP_SKIP_DOWNLOAD=true npm i -g openclaw@2026.2.26 --ignore-scripts
                     if [ $? -ne 0 ]; then
                         log "Openclaw 更新失败"
                         echo -e "${RED}错误：Openclaw 更新失败${NC}"
@@ -373,14 +373,14 @@ configure_npm() {
                     if [ "$UPDATE_CHOICE" = "y" ] || [ "$UPDATE_CHOICE" = "Y" ]; then
                         log "开始更新 Openclaw"
                         echo -e "${YELLOW}正在更新 Openclaw...${NC}"
-                        run_cmd env NODE_LLAMA_CPP_SKIP_DOWNLOAD=true npm i -g openclaw --ignore-scripts
+                        run_cmd env NODE_LLAMA_CPP_SKIP_DOWNLOAD=true npm i -g openclaw@2026.2.26 --ignore-scripts
                         if [ $? -ne 0 ]; then
                             log "Openclaw 更新失败"
                             echo -e "${RED}错误：Openclaw 更新失败${NC}"
                             exit 1
                         fi
                         log "Openclaw 更新完成"
-                        echo -e "${GREEN}✅ Openclaw 已更新到 $LATEST_VERSION${NC}"
+                        echo -e "${GREEN}✅ Openclaw 已更新到 2026.2.26${NC}"
                     else
                         log "用户选择跳过更新"
                         echo -e "${YELLOW}跳过更新，使用当前版本${NC}"
@@ -396,7 +396,7 @@ configure_npm() {
         echo -e "${YELLOW}正在安装 Openclaw...${NC}"
         # 安装 Openclaw (使用 --ignore-scripts 跳过原生模块编译)
         # 设置环境变量跳过 node-llama-cpp 下载/编译（Termux 环境不支持）
-        run_cmd env NODE_LLAMA_CPP_SKIP_DOWNLOAD=true npm i -g openclaw --ignore-scripts
+        run_cmd env NODE_LLAMA_CPP_SKIP_DOWNLOAD=true npm i -g openclaw@2026.2.26 --ignore-scripts
         if [ $? -ne 0 ]; then
             log "Openclaw 安装失败"
             echo -e "${RED}错误：Openclaw 安装失败${NC}"
