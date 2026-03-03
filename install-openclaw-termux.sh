@@ -324,6 +324,7 @@ configure_npm() {
     fi
 
     # 检查并安装/更新 Openclaw
+    TARGET_VERSION="2026.2.26"  # 指定安装版本
     INSTALLED_VERSION=""
     LATEST_VERSION=""
     NEED_UPDATE=0
@@ -358,14 +359,15 @@ configure_npm() {
                 if [ $FORCE_UPDATE -eq 1 ]; then
                     log "强制更新模式，直接更新"
                     echo -e "${YELLOW}正在更新 Openclaw...${NC}"
-                    run_cmd env NODE_LLAMA_CPP_SKIP_DOWNLOAD=true npm i -g openclaw@2026.2.26 --ignore-scripts
+                    run_cmd env NODE_LLAMA_CPP_SKIP_DOWNLOAD=true npm i -g openclaw@$TARGET_VERSION --ignore-scripts
                     if [ $? -ne 0 ]; then
                         log "Openclaw 更新失败"
                         echo -e "${RED}错误：Openclaw 更新失败${NC}"
                         exit 1
                     fi
                     log "Openclaw 更新完成"
-                    echo -e "${GREEN}✅ Openclaw 已更新到 $LATEST_VERSION${NC}"
+                    INSTALLED_VERSION=$(npm list -g openclaw --depth=0 2>/dev/null | grep -oE 'openclaw@[0-9]+\.[0-9]+\.[0-9]+' | cut -d@ -f2)
+                    echo -e "${GREEN}✅ Openclaw 已更新到 $INSTALLED_VERSION${NC}"
                 else
                     read -p "是否更新到新版本? (y/n) [默认: y]: " UPDATE_CHOICE
                     UPDATE_CHOICE=${UPDATE_CHOICE:-y}
@@ -373,7 +375,7 @@ configure_npm() {
                     if [ "$UPDATE_CHOICE" = "y" ] || [ "$UPDATE_CHOICE" = "Y" ]; then
                         log "开始更新 Openclaw"
                         echo -e "${YELLOW}正在更新 Openclaw...${NC}"
-                        run_cmd env NODE_LLAMA_CPP_SKIP_DOWNLOAD=true npm i -g openclaw@2026.2.26 --ignore-scripts
+                        run_cmd env NODE_LLAMA_CPP_SKIP_DOWNLOAD=true npm i -g openclaw@$TARGET_VERSION --ignore-scripts
                         if [ $? -ne 0 ]; then
                             log "Openclaw 更新失败"
                             echo -e "${RED}错误：Openclaw 更新失败${NC}"
@@ -394,10 +396,10 @@ configure_npm() {
         fi
     else
         log "开始安装 Openclaw"
-        echo -e "${YELLOW}正在安装 Openclaw 2026.2.26...${NC}"
+        echo -e "${YELLOW}正在安装 Openclaw $TARGET_VERSION...${NC}"
         # 安装 Openclaw (使用 --ignore-scripts 跳过原生模块编译)
         # 设置环境变量跳过 node-llama-cpp 下载/编译（Termux 环境不支持）
-        run_cmd env NODE_LLAMA_CPP_SKIP_DOWNLOAD=true npm i -g openclaw@2026.2.26 --ignore-scripts
+        run_cmd env NODE_LLAMA_CPP_SKIP_DOWNLOAD=true npm i -g openclaw@$TARGET_VERSION --ignore-scripts
         if [ $? -ne 0 ]; then
             log "Openclaw 安装失败"
             echo -e "${RED}错误：Openclaw 安装失败${NC}"
