@@ -452,12 +452,17 @@ configure_npm() {
         echo -e "${GREEN}✓ dist 目录构建成功${NC}"
     fi
 
-    # 创建 bin/dist 符号链接（解决 openclaw bin 路径问题）
-    # openclaw bin 使用 ./dist/entry.js 相对路径，需要链接到正确的 dist 目录
-    log "创建 bin/dist 符号链接"
-    if [ -d "$NPM_BIN" ] && [ -d "$BASE_DIR/dist" ]; then
-        ln -sf "$BASE_DIR/dist" "$NPM_BIN/dist"
-        echo -e "${GREEN}✓ bin/dist 符号链接创建成功${NC}"
+    # 创建 openclaw 包装脚本（解决 ESM bin 路径解析问题）
+    # 原 bin 文件使用 ESM 动态 import，符号链接方式无法正确解析模块路径
+    # 使用 shell 脚本包装，直接调用 node 执行 entry.js
+    log "创建 openclaw 包装脚本"
+    if [ -d "$BASE_DIR/dist" ] && [ -f "$BASE_DIR/dist/entry.js" ]; then
+        cat > "$NPM_BIN/openclaw" << WRAPPER
+#!/data/data/com.termux/files/usr/bin/sh
+exec node $BASE_DIR/dist/entry.js "\$@"
+WRAPPER
+        chmod +x "$NPM_BIN/openclaw"
+        echo -e "${GREEN}✓ openclaw 包装脚本创建成功${NC}"
     fi
 
     # 应用 koffi stub (Termux 兼容性修复)
