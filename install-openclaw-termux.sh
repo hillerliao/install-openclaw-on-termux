@@ -324,7 +324,7 @@ configure_npm() {
     fi
 
     # 检查并安装/更新 Openclaw
-    TARGET_VERSION="2026.2.26"  # 指定安装版本
+    TARGET_VERSION="2026.2.17"  # 指定安装版本
     INSTALLED_VERSION=""
     LATEST_VERSION=""
     NEED_UPDATE=0
