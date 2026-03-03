@@ -326,6 +326,12 @@ configure_npm() {
     # 设置临时目录（node-gyp 编译需要）
     export TMPDIR="$HOME/tmp"
 
+    # 配置 git 使用 HTTPS 替代 SSH（解决 Termux SSH 连接问题）
+    log "配置 git HTTPS"
+    git config --global url."https://github.com/".insteadOf ssh://git@github.com/ 2>/dev/null || true
+    git config --global url."https://github.com/".insteadOf git@github.com: 2>/dev/null || true
+    echo -e "${GREEN}✓ git HTTPS 配置完成${NC}"
+
     # 创建 GYP 配置（避免 node-gyp 找 Android NDK）
     log "配置 GYP 环境"
     mkdir -p "$HOME/.gyp"
@@ -445,7 +451,15 @@ configure_npm() {
         log "dist 目录构建成功"
         echo -e "${GREEN}✓ dist 目录构建成功${NC}"
     fi
-    
+
+    # 创建 bin/dist 符号链接（解决 openclaw bin 路径问题）
+    # openclaw bin 使用 ./dist/entry.js 相对路径，需要链接到正确的 dist 目录
+    log "创建 bin/dist 符号链接"
+    if [ -d "$NPM_BIN" ] && [ -d "$BASE_DIR/dist" ]; then
+        ln -sf "$BASE_DIR/dist" "$NPM_BIN/dist"
+        echo -e "${GREEN}✓ bin/dist 符号链接创建成功${NC}"
+    fi
+
     # 应用 koffi stub (Termux 兼容性修复)
     apply_koffi_stub
 }
