@@ -505,6 +505,28 @@ apply_patches() {
         fi
         log "剪贴板补丁应用成功"
     fi
+
+    # 修复 openclaw 可执行文件的 shebang（Termux 兼容性）
+    OPENCLAW_BIN="$NPM_BIN/openclaw"
+    if [ -f "$OPENCLAW_BIN" ]; then
+        log "检查并修复 openclaw 可执行文件的 shebang"
+        # 只在 /usr/bin/env 不存在时修复（即 Termux 环境）
+        if [ ! -x "/usr/bin/env" ] && head -n1 "$OPENCLAW_BIN" | grep -q "^#!/usr/bin/env"; then
+            # 使用 PREFIX 环境变量获取 Termux 的实际前缀路径
+            TERMUX_PREFIX="${PREFIX:-/data/data/com.termux/files/usr}"
+            # 确认目标 env 存在且可执行
+            if [ -x "${TERMUX_PREFIX}/bin/env" ]; then
+                sed -i "1s|#!/usr/bin/env|#!${TERMUX_PREFIX}/bin/env|" "$OPENCLAW_BIN"
+                log "openclaw shebang 已修复"
+                echo -e "${GREEN}✓ openclaw shebang 已修复为 Termux 兼容路径${NC}"
+            else
+                log "警告: Termux env 路径不存在"
+                echo -e "${YELLOW}⚠️  Termux env 路径不存在，跳过 shebang 修复${NC}"
+            fi
+        else
+            log "openclaw shebang 无需修复"
+        fi
+    fi
 }
 
 setup_autostart() {
