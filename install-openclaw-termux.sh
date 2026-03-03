@@ -380,7 +380,8 @@ configure_npm() {
                             exit 1
                         fi
                         log "Openclaw 更新完成"
-                        echo -e "${GREEN}✅ Openclaw 已更新到 2026.2.26${NC}"
+                        INSTALLED_VERSION=$(npm list -g openclaw --depth=0 2>/dev/null | grep -oE 'openclaw@[0-9]+\.[0-9]+\.[0-9]+' | cut -d@ -f2)
+                        echo -e "${GREEN}✅ Openclaw 已更新到 $INSTALLED_VERSION${NC}"
                     else
                         log "用户选择跳过更新"
                         echo -e "${YELLOW}跳过更新，使用当前版本${NC}"
