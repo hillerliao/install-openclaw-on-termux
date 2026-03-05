@@ -3,7 +3,7 @@
 # Openclaw Termux Deployment Script v2.0
 # ==========================================
 #
-# Usage: curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh [options]
+# Usage: curl -sL https://s.zhihai.me/openclaw_en > openclaw-install.sh && source openclaw-install.sh [options]
 #
 # Options:
 #   --help, -h       Show help information
@@ -13,11 +13,11 @@
 #   --update, -U     Force update Openclaw to latest version without prompting
 #
 # Examples:
-#   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh
-#   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh --verbose
-#   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh --dry-run
-#   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh --uninstall
-#   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh --update
+#   curl -sL https://s.zhihai.me/openclaw_en > openclaw-install.sh && source openclaw-install.sh
+#   curl -sL https://s.zhihai.me/openclaw_en > openclaw-install.sh && source openclaw-install.sh --verbose
+#   curl -sL https://s.zhihai.me/openclaw_en > openclaw-install.sh && source openclaw-install.sh --dry-run
+#   curl -sL https://s.zhihai.me/openclaw_en > openclaw-install.sh && source openclaw-install.sh --uninstall
+#   curl -sL https://s.zhihai.me/openclaw_en > openclaw-install.sh && source openclaw-install.sh --update
 #
 # Note: For direct local execution, use: source install-openclaw-termux.sh [options]
 #

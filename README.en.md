@@ -44,7 +44,7 @@ Openclaw is a powerful AI gateway service. This script is specifically designed 
 ### 🚀 One-Click Deployment
 
 ```bash
-curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh
+curl -sL https://s.zhihai.me/openclaw_en > openclaw-install.sh && source openclaw-install.sh
 ```
 
 ### 🔧 Automated Configuration
