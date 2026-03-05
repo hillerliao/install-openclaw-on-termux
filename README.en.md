@@ -110,7 +110,7 @@ The script will automatically install the following Termux components (if not in
 ### Method 1: Online Installation (Recommended)
 
 ```bash
-curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh
+curl -sL https://s.zhihai.me/openclaw_en > openclaw-install.sh && source openclaw-install.sh
 ```
 
 ### Method 2: Local Installation
