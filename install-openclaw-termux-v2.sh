@@ -1,7 +1,7 @@
 #!/bin/bash
 # ==========================================
 # Openclaw Termux Deployment Script v2
-# Full install/update flow integrated; uninstall remains pending
+# Install/update/uninstall flows are integrated in staged form
 # ==========================================
 
 APP_NAME="OpenClaw Termux 部署工具"
@@ -108,14 +108,14 @@ show_help() {
   bash ${SCRIPT_NAME} [选项]
 
 说明:
-  当前文件已接入完整安装主流程：输入采集、依赖准备、安装更新、补丁、shell 集成、服务启动与 onboard 引导。
-  卸载模式仍为后续预留能力。
+  当前文件已接入安装/更新/卸载主流程。
+  卸载会清理 v2 受管 shell 配置、env.sh、OpenClaw 全局包、运行日志与 openclaw.json（删除前会先备份）。
 
 选项:
   --help, -h       显示帮助
   --verbose, -v    启用详细输出
   --dry-run, -d    模拟运行
-  --uninstall, -u  预留：卸载模式
+  --uninstall, -u  卸载 OpenClaw 与 v2 受管配置
   --update, -U     强制更新已安装的 OpenClaw
   --yes            非交互模式，使用默认值
   --port <port>    指定 Gateway 端口
@@ -341,6 +341,17 @@ remove_openclaw_shell_block() {
         die "无法清理旧的 OpenClaw shell 配置块"
         return $?
     }
+}
+
+cleanup_current_shell_openclaw_runtime() {
+    if [ "$DRY_RUN" -eq 1 ]; then
+        warn "dry-run 下跳过当前 shell 即时清理，仅展示将移除的运行时配置"
+        return 0
+    fi
+
+    unset -f ocr oclog ockill 2>/dev/null || true
+    unset OPENCLAW_GATEWAY_TOKEN OPENCLAW_PORT OPENCLAW_AUTO_START OPENCLAW_LOG_DIR OPENCLAW_NPM_BIN OPENCLAW_BIN
+    hash -r 2>/dev/null || true
 }
 
 confirm_with_default() {
@@ -610,6 +621,42 @@ EOF
     }
 
     success "✅ koffi stub 已应用"
+}
+
+create_openclaw_wrapper() {
+    local termux_prefix="${PREFIX:-/data/data/com.termux/files/usr}"
+    local shell_path="$termux_prefix/bin/sh"
+    local entry_js="$OPENCLAW_BASE_DIR/dist/entry.js"
+    local wrapper_content=""
+
+    if [ ! -f "$entry_js" ]; then
+        die "OpenClaw 入口文件不存在，无法创建包装脚本：$entry_js"
+        return $?
+    fi
+
+    ensure_parent_dir "$OPENCLAW_BIN" || return $?
+    if [ ! -x "$shell_path" ]; then
+        warn "Termux shell 路径不存在，回退使用 /bin/sh：$shell_path"
+        shell_path="/bin/sh"
+    fi
+
+    log "创建 openclaw 包装脚本以修复 ESM bin 路径解析"
+    wrapper_content=$(cat <<EOF
+#!$shell_path
+exec node "$entry_js" "\$@"
+EOF
+)
+
+    write_text_file "$OPENCLAW_BIN" "$wrapper_content" || {
+        die "openclaw 包装脚本写入失败：$OPENCLAW_BIN"
+        return $?
+    }
+    run_cmd chmod +x "$OPENCLAW_BIN" || {
+        die "openclaw 包装脚本授权失败：$OPENCLAW_BIN"
+        return $?
+    }
+
+    success "✅ openclaw 包装脚本已创建"
 }
 
 fix_openclaw_shebang() {
@@ -1126,6 +1173,7 @@ apply_patches() {
     patch_hardcoded_npm_path || return $?
     apply_clipboard_stub || return $?
     apply_koffi_stub || return $?
+    create_openclaw_wrapper || return $?
     fix_openclaw_shebang || return $?
 
     success "✅ Termux 兼容补丁已处理完成"
@@ -1356,6 +1404,75 @@ run_onboard() {
     echo "常用命令：ocr（重启） / oclog（查看会话） / ockill（停止）"
 }
 
+uninstall_openclaw() {
+    local config_path="$HOME/.openclaw/openclaw.json"
+    local backup_path=""
+
+    warn "正在卸载 OpenClaw..."
+
+    warn "[UNINSTALL 1/5] 正在停止服务与后台会话..."
+    if [ "$DRY_RUN" -eq 1 ]; then
+        echo "[DRY-RUN] pkill -9 -f openclaw"
+        echo "[DRY-RUN] tmux kill-session -t openclaw"
+    else
+        command -v pkill >/dev/null 2>&1 && pkill -9 -f 'openclaw' >/dev/null 2>&1 || true
+        command -v tmux >/dev/null 2>&1 && tmux kill-session -t openclaw >/dev/null 2>&1 || true
+    fi
+
+    warn "[UNINSTALL 2/5] 正在清理 shell 集成与环境文件..."
+    remove_openclaw_shell_block || return $?
+    if [ -f "$OPENCLAW_ENV_FILE" ] || [ "$DRY_RUN" -eq 1 ]; then
+        run_cmd rm -f "$OPENCLAW_ENV_FILE" || {
+            die "无法删除环境文件：$OPENCLAW_ENV_FILE"
+            return $?
+        }
+    else
+        info "未检测到环境文件，跳过：$OPENCLAW_ENV_FILE"
+    fi
+    if [ "$SCRIPT_SOURCED" -eq 1 ]; then
+        cleanup_current_shell_openclaw_runtime || return $?
+    fi
+
+    warn "[UNINSTALL 3/5] 正在卸载 OpenClaw 全局包..."
+    if [ "$DRY_RUN" -eq 1 ] || command -v npm >/dev/null 2>&1; then
+        run_cmd npm uninstall -g "$OPENCLAW_PACKAGE" || warn "npm uninstall 返回非 0，可能尚未安装 OpenClaw"
+    else
+        warn "未检测到 npm，跳过全局包卸载"
+    fi
+
+    warn "[UNINSTALL 4/5] 正在清理运行状态与配置..."
+    run_cmd rm -f "$UPDATE_FLAG" || warn "更新标记删除失败：$UPDATE_FLAG"
+    if [ -f "$config_path" ]; then
+        backup_path="$config_path.$(date +%Y%m%d_%H%M%S).bak"
+        run_cmd cp "$config_path" "$backup_path" || {
+            die "备份 openclaw.json 失败：$backup_path"
+            return $?
+        }
+        run_cmd rm -f "$config_path" || {
+            die "无法删除配置文件：$config_path"
+            return $?
+        }
+        success "✅ 已备份并删除 openclaw.json：$backup_path"
+    else
+        info "未检测到 openclaw.json，跳过备份与删除"
+    fi
+
+    warn "[UNINSTALL 5/5] 正在清理日志目录..."
+    if [ -d "$LOG_DIR" ] || [ "$DRY_RUN" -eq 1 ]; then
+        run_cmd rm -rf "$LOG_DIR" || {
+            die "无法删除日志目录：$LOG_DIR"
+            return $?
+        }
+    else
+        info "未检测到日志目录，跳过：$LOG_DIR"
+    fi
+
+    success "✅ OpenClaw 卸载流程已完成"
+    warn "说明：已保留 $NPM_GLOBAL 目录中可能存在的其他全局包，仅尝试卸载 openclaw 本身。"
+
+    return 0
+}
+
 main() {
     init_colors
     parse_args "$@" || return $?
@@ -1373,7 +1490,7 @@ main() {
         info "详细输出模式已启用"
     fi
     if [ "$UNINSTALL" -eq 1 ]; then
-        warn "[WIP] 卸载逻辑将在后续阶段迁移"
+        uninstall_openclaw || return $?
         return 0
     fi
 
