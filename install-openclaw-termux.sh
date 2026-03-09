@@ -328,8 +328,8 @@ configure_npm() {
 
     # 配置 git 使用 HTTPS 替代 SSH（解决 Termux SSH 连接问题）
     log "配置 git HTTPS"
-    git config --global url."https://github.com/".insteadOf ssh://git@github.com/ 2>/dev/null || true
-    git config --global url."https://github.com/".insteadOf git@github.com: 2>/dev/null || true
+    git config --global url."https://github.com/".insteadOf "ssh://git@github.com/" 2>/dev/null || true
+    git config --global --add url."https://github.com/".insteadOf "git@github.com:" 2>/dev/null || true
     echo -e "${GREEN}✓ git HTTPS 配置完成${NC}"
 
     # 创建 GYP 配置（避免 node-gyp 找 Android NDK）

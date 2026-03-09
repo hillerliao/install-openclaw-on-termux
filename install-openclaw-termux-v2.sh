@@ -1161,10 +1161,10 @@ configure_npm() {
 
     apply_runtime_env_for_current_shell
 
-    run_cmd git config --global url."https://github.com/".insteadOf ssh://git@github.com/ || {
+    run_cmd git config --global url."https://github.com/".insteadOf "ssh://git@github.com/" || {
         warn "git ssh->https 映射配置失败（可稍后手动处理）"
     }
-    run_cmd git config --global url."https://github.com/".insteadOf git@github.com: || {
+    run_cmd git config --global --add url."https://github.com/".insteadOf "git@github.com:" || {
         warn "git scp-style ssh->https 映射配置失败（可稍后手动处理）"
     }
 
