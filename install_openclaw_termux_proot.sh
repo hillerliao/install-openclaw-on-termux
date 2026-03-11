@@ -62,21 +62,41 @@ echo "检测到 Ubuntu 代号: $CODENAME"
 ARCH=$(dpkg --print-architecture 2>/dev/null || uname -m)
 echo "检测到架构: $ARCH"
 
-# 根据架构和版本选择源（arm64 使用 ports.ubuntu.com）
+# 根据架构和版本选择源（优先使用 HTTPS，并探测当前 codename/arch 是否可用）
 if [ "$ARCH" = "arm64" ] || [ "$ARCH" = "aarch64" ]; then
-  # arm64 架构使用 ports.ubuntu.com
-  echo "arm64 架构，使用 ports.ubuntu.com"
-  MIRROR_URL="http://ports.ubuntu.com/ubuntu-ports"
+  echo "arm64 架构，探测可用的 ubuntu-ports HTTPS 镜像"
+  MIRROR_CANDIDATES=(
+    "https://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports"
+    "https://mirrors.ustc.edu.cn/ubuntu-ports"
+    "https://ports.ubuntu.com/ubuntu-ports"
+  )
 else
-  # 其他架构检测清华源是否支持
-  TUNA_TEST_URL="http://mirrors.tuna.tsinghua.edu.cn/ubuntu/dists/$CODENAME/main/binary-$ARCH/Packages.gz"
-  if curl -fsSL --connect-timeout 5 "$TUNA_TEST_URL" 2>/dev/null | head -c 1 | grep -q .; then
-    echo "清华源支持 $CODENAME $ARCH，使用清华源"
-    MIRROR_URL="http://mirrors.tuna.tsinghua.edu.cn/ubuntu"
-  else
-    echo "清华源不支持 $CODENAME $ARCH，使用官方源"
-    MIRROR_URL="http://archive.ubuntu.com/ubuntu"
+  echo "$ARCH 架构，探测可用的 Ubuntu HTTPS 镜像"
+  MIRROR_CANDIDATES=(
+    "https://mirrors.tuna.tsinghua.edu.cn/ubuntu"
+    "https://mirrors.ustc.edu.cn/ubuntu"
+    "https://archive.ubuntu.com/ubuntu"
+  )
+fi
+
+MIRROR_URL=""
+for candidate in "${MIRROR_CANDIDATES[@]}"; do
+  TEST_URL="$candidate/dists/$CODENAME/main/binary-$ARCH/Packages.gz"
+  echo "测试镜像: $TEST_URL"
+  if curl -fsI -L --connect-timeout 8 --max-time 20 "$TEST_URL" >/dev/null 2>&1; then
+    MIRROR_URL="$candidate"
+    echo "使用镜像: $MIRROR_URL"
+    break
   fi
+done
+
+if [ -z "$MIRROR_URL" ]; then
+  if [ "$ARCH" = "arm64" ] || [ "$ARCH" = "aarch64" ]; then
+    MIRROR_URL="https://ports.ubuntu.com/ubuntu-ports"
+  else
+    MIRROR_URL="https://archive.ubuntu.com/ubuntu"
+  fi
+  echo "警告：镜像探测失败，回退到: $MIRROR_URL"
 fi
 
 # 写入源
