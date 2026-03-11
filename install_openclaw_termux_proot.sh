@@ -191,6 +191,22 @@ fi
 nvm install 22
 nvm alias default 22
 nvm use 22
+NODE_EXE="$(command -v node)"
+NODE_BIN_DIR="$(dirname "$(command -v node)")"
+
+# 让后续登录 shell 也能直接使用 node/npm/openclaw
+mkdir -p /etc/profile.d
+cat > /etc/profile.d/openclaw-nvm.sh <<OPENCLAW_NVM_PROFILE_EOF
+export NVM_DIR="\$HOME/.nvm"
+if [ -s "\$NVM_DIR/nvm.sh" ]; then
+  . "\$NVM_DIR/nvm.sh" >/dev/null 2>&1 || true
+fi
+case ":\$PATH:" in
+  *:"$NODE_BIN_DIR":*) ;;
+  *) export PATH="$NODE_BIN_DIR:\$PATH" ;;
+esac
+OPENCLAW_NVM_PROFILE_EOF
+chmod 644 /etc/profile.d/openclaw-nvm.sh
 
 # 6. 安装 OpenClaw（全局）
 npm config set fund false
@@ -201,7 +217,6 @@ mkdir -p "$HOME/.openclaw"
 cat > "$HOME/.openclaw/hijack.js" <<'OPENCLAW_HIJACK_JS_EOF'
 const Module = require('module');
 const os = require('node:os');
-const originalRequire = Module.prototype.require;
 const originalNetworkInterfaces = os.networkInterfaces.bind(os);
 
 os.networkInterfaces = function patchedNetworkInterfaces() {
@@ -233,17 +248,6 @@ os.networkInterfaces = function patchedNetworkInterfaces() {
 if (typeof Module.syncBuiltinESMExports === 'function') {
   Module.syncBuiltinESMExports();
 }
-
-Module.prototype.require = function(path) {
-  if (path === 'child_process') {
-    return {
-      spawn: () => { throw new Error('spawn disabled'); },
-      exec: () => { throw new Error('exec disabled'); },
-      execSync: () => { throw new Error('execSync disabled'); }
-    };
-  }
-  return originalRequire.apply(this, arguments);
-};
 OPENCLAW_HIJACK_JS_EOF
 
 # 8. 启动 OpenClaw 网关（后台运行），查找 openclaw 可执行路径
@@ -261,34 +265,34 @@ fi
 echo "找到 openclaw: $OPENCLAW_BIN"
 
 # 8.1 包装 openclaw 命令，确保所有 CLI 子命令都自动加载 proot shim
-REAL_OPENCLAW_BIN="${OPENCLAW_BIN}.proot-real"
-if ! grep -q 'OPENCLAW_PROOT_WRAPPER' "$OPENCLAW_BIN" 2>/dev/null; then
-  rm -f "$REAL_OPENCLAW_BIN"
-  mv "$OPENCLAW_BIN" "$REAL_OPENCLAW_BIN"
+if [ -L "$OPENCLAW_BIN" ]; then
+  REAL_OPENCLAW_BIN="$(readlink -f "$OPENCLAW_BIN")"
+  rm -f "$OPENCLAW_BIN"
+else
+  REAL_OPENCLAW_BIN="${OPENCLAW_BIN}.proot-real"
+  if ! grep -q 'OPENCLAW_PROOT_WRAPPER' "$OPENCLAW_BIN" 2>/dev/null; then
+    rm -f "$REAL_OPENCLAW_BIN"
+    mv "$OPENCLAW_BIN" "$REAL_OPENCLAW_BIN"
+  fi
 fi
 cat > "$OPENCLAW_BIN" <<OPENCLAW_WRAPPER_EOF
 #!/usr/bin/env bash
 # OPENCLAW_PROOT_WRAPPER
+export PATH="$NODE_BIN_DIR:\$PATH"
 export NODE_OPTIONS="--require=$HOME/.openclaw/hijack.js\${NODE_OPTIONS:+ \$NODE_OPTIONS}"
-exec "$REAL_OPENCLAW_BIN" "\$@"
+exec "$NODE_EXE" "$REAL_OPENCLAW_BIN" "\$@"
 OPENCLAW_WRAPPER_EOF
 chmod +x "$OPENCLAW_BIN"
+mkdir -p /usr/local/bin
+ln -sf "$OPENCLAW_BIN" /usr/local/bin/openclaw
 
-# 确保 nohup 可用，否则使用 setsid
-if command -v nohup >/dev/null 2>&1; then
-  nohup "$OPENCLAW_BIN" gateway > "$HOME/openclaw_gateway.log" 2>&1 &
-else
-  setsid "$OPENCLAW_BIN" gateway > "$HOME/openclaw_gateway.log" 2>&1 &
-fi
-
-echo "OpenClaw gateway 已后台启动，日志: $HOME/openclaw_gateway.log"
-sleep 5
-# 检查进程是否存活（匹配 node 进程运行的 openclaw）
-if pgrep -f "node.*openclaw" >/dev/null 2>&1; then
-  echo "✓ OpenClaw 进程运行正常"
-else
-  echo "⚠ 警告：OpenClaw 进程可能未成功启动，请检查日志: $HOME/openclaw_gateway.log"
-fi
+echo "OpenClaw 已安装完成，但尚未执行 onboard，当前不会自动启动 gateway。"
+echo "请先在 Ubuntu 环境中依次执行以下命令："
+echo "  1) openclaw doctor --fix"
+echo "  2) openclaw onboard"
+echo "  3) openclaw gateway"
+echo "如需后台运行，可在完成 onboard 后执行："
+echo "  nohup openclaw gateway > \$HOME/openclaw_gateway.log 2>&1 &"
 echo "进入 proot-distro 完成。"
 PROOT_BASH
 
