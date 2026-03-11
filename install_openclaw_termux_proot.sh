@@ -167,12 +167,26 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y curl build-essential git wget 
 
 # 5. 安装 nvm 并切换 Node.js 22.x
 export NVM_DIR="$HOME/.nvm"
-if [ ! -d "$NVM_DIR" ]; then
-  curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+install_nvm() {
+  echo "安装/重装 nvm..."
+  rm -rf "$NVM_DIR"
+  curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | PROFILE=/dev/null bash
+}
+
+load_nvm() {
+  export NVM_DIR="$HOME/.nvm"
+  [ -s "$NVM_DIR/nvm.sh" ] || return 1
+  unset -f nvm 2>/dev/null || true
+  . "$NVM_DIR/nvm.sh"
+  command -v nvm >/dev/null 2>&1
+}
+
+if ! load_nvm; then
+  echo "检测到 nvm 不可用，尝试重新安装..."
+  install_nvm
+  load_nvm || { echo "错误：nvm 安装/加载失败，nvm 仍不可用"; exit 1; }
 fi
-# 显式加载 nvm
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
 # 安装 Node 22（安装最新 22.x）
 nvm install 22
 nvm alias default 22
