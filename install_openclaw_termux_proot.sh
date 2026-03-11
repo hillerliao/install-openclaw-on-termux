@@ -10,12 +10,20 @@ echo "开始部署：$(date)"
 echo "如果尚未授权 Termux 存储，请在新终端运行: termux-setup-storage 并授权后再运行本脚本。"
 # 不自动调用 termux-setup-storage 以避免非交互阻塞
 
+termux_apt_noninteractive() {
+  DEBIAN_FRONTEND=noninteractive apt-get \
+    -o Dpkg::Options::=--force-confdef \
+    -o Dpkg::Options::=--force-confold \
+    "$@"
+}
+
 # 1. 更新 Termux 包
 echo "1. 更新 Termux 包"
-pkg update -y
+dpkg --force-confdef --force-confold --configure -a
+termux_apt_noninteractive update
 # 避免在 `curl | bash` 过程中升级当前正在运行的 bash，
 # 这会触发 bash.bashrc 交互式 conffile 提示，并可能打断后续脚本执行。
-pkg install proot-distro git curl wget nano -y
+termux_apt_noninteractive install -y proot-distro git curl wget nano
 
 # 2. 安装 Ubuntu（自动决定可用发行版，不要求用户选择版本）
 echo "2. 安装并准备 proot-distro 的 Ubuntu"
