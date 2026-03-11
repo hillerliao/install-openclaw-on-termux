@@ -72,9 +72,27 @@ else
 fi
 
 # 3. 进入 Ubuntu 并执行后续命令（在 proot 内部执行）
-proot-distro login "$DISTRO" -- bash -s <<'PROOT_BASH'
+OPENCLAW_TERMUX_DISTRO="$DISTRO" proot-distro login "$DISTRO" -- bash -s <<'PROOT_BASH'
 set -euo pipefail
 echo "进入 proot-distro: $(date)"
+
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+if ! [ -t 1 ] || [ "$(tput colors 2>/dev/null || echo 0)" -lt 8 ]; then
+  GREEN=''
+  BLUE=''
+  YELLOW=''
+  RED=''
+  CYAN=''
+  NC=''
+fi
+
+DISTRO_NAME="${OPENCLAW_TERMUX_DISTRO:-ubuntu}"
 
 # 3.1 备份并替换 Ubuntu 源（根据发行版动态配置）
 if [ -f /etc/apt/sources.list ]; then
@@ -250,7 +268,7 @@ if (typeof Module.syncBuiltinESMExports === 'function') {
 }
 OPENCLAW_HIJACK_JS_EOF
 
-# 8. 启动 OpenClaw 网关（后台运行），查找 openclaw 可执行路径
+# 8. 查找 openclaw 可执行路径并包装命令
 OPENCLAW_BIN="$(command -v openclaw || true)"
 if [ -z "$OPENCLAW_BIN" ]; then
   # 尝试 npm 全局 bin 路径
@@ -286,15 +304,87 @@ chmod +x "$OPENCLAW_BIN"
 mkdir -p /usr/local/bin
 ln -sf "$OPENCLAW_BIN" /usr/local/bin/openclaw
 
-echo "OpenClaw 已安装完成，但尚未执行 onboard，当前不会自动启动 gateway。"
-echo "请先在 Ubuntu 环境中依次执行以下命令："
-echo "  1) openclaw doctor --fix"
-echo "  2) openclaw onboard"
-echo "  3) openclaw gateway"
-echo "如需后台运行，可在完成 onboard 后执行："
-echo "  nohup openclaw gateway > \$HOME/openclaw_gateway.log 2>&1 &"
+is_openclaw_config_ready() {
+  [ -f "$HOME/.openclaw/openclaw.json" ] || return 1
+  node -e "JSON.parse(require('fs').readFileSync(process.env.HOME + '/.openclaw/openclaw.json','utf8'))" >/dev/null 2>&1
+}
+
+show_resume_tip() {
+  local state="${1:-needs_onboard}"
+  echo
+  echo -e "${BLUE}==========================================${NC}"
+  echo -e "${GREEN}✅ OpenClaw 已安装完成${NC}"
+  echo -e "${BLUE}==========================================${NC}"
+  if [ "$state" = "configured" ]; then
+    echo "首次配置已经完成。"
+    echo "下次打开时：先进入 Ubuntu，再运行 openclaw gateway。"
+    echo "如果要进入对话界面，可新开一个 Termux 会话后执行 openclaw tui。"
+  else
+    echo "安装已经完成，还差最后一步首次配置。"
+    echo "下次打开时：先进入 Ubuntu，再运行 openclaw onboard。"
+  fi
+  echo "进入 Ubuntu 的命令：proot-distro login $DISTRO_NAME"
+  echo "提示：不要把 Termux 从后台划掉，否则 OpenClaw 进程也会一起结束。"
+}
+
+echo
+echo -e "${BLUE}==========================================${NC}"
+echo -e "${GREEN}✅ OpenClaw 安装完成${NC}"
+echo -e "${BLUE}==========================================${NC}"
+echo -e "${CYAN}接下来可以直接开始首次配置，不需要你自己再记命令。${NC}"
+
+if [ ! -r /dev/tty ] || [ ! -w /dev/tty ]; then
+  echo "当前不是交互终端，已跳过首次配置引导。"
+  show_resume_tip "needs_onboard"
+  echo "进入 proot-distro 完成。"
+  exit 0
+fi
+
+echo "配置时请准备好你的模型 API Key。"
+echo "如果看到 systemd 相关提示，在 proot 环境里通常可以先忽略。"
+echo
+read -r -p "现在开始首次配置（openclaw onboard）吗？[Y/n]: " START_ONBOARD < /dev/tty || START_ONBOARD="n"
+START_ONBOARD="${START_ONBOARD:-y}"
+
+if [[ "$START_ONBOARD" =~ ^[Yy]$ ]]; then
+  echo
+  echo -e "${YELLOW}即将进入 openclaw onboard 配置界面...${NC}"
+  echo "如果中途想稍后再配，按 Ctrl+C 退出即可。"
+  read -r -p "按回车继续..." _ < /dev/tty || true
+  echo
+
+  if openclaw onboard < /dev/tty > /dev/tty 2>&1 && is_openclaw_config_ready; then
+    echo
+    echo -e "${GREEN}✅ 首次配置已完成。${NC}"
+    read -r -p "是否现在启动 OpenClaw gateway？[Y/n]: " START_GATEWAY < /dev/tty || START_GATEWAY="n"
+    START_GATEWAY="${START_GATEWAY:-y}"
+
+    if [[ "$START_GATEWAY" =~ ^[Yy]$ ]]; then
+      echo
+      echo -e "${YELLOW}正在启动 openclaw gateway（前台运行，按 Ctrl+C 可退出）...${NC}"
+      echo
+      if openclaw gateway < /dev/tty > /dev/tty 2>&1; then
+        :
+      else
+        echo
+        echo -e "${YELLOW}OpenClaw gateway 已退出。${NC}"
+      fi
+    fi
+
+    show_resume_tip "configured"
+  else
+    echo
+    echo -e "${YELLOW}已退出首次配置，稍后还可以继续。${NC}"
+    show_resume_tip "needs_onboard"
+  fi
+else
+  echo
+  echo "好的，这次先只完成安装。"
+  show_resume_tip "needs_onboard"
+fi
+
 echo "进入 proot-distro 完成。"
 PROOT_BASH
 
 echo "部署脚本执行结束：$(date)"
-echo "请在 Ubuntu 环境内完成 Token 配置与 Termux 存储授权（如需要）。日志文件：$LOGFILE"
+echo "部署日志文件：$LOGFILE"
