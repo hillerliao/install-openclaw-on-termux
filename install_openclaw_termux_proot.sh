@@ -339,7 +339,7 @@ echo
 echo -e "${BLUE}==========================================${NC}"
 echo -e "${GREEN}✅ OpenClaw 安装完成${NC}"
 echo -e "${BLUE}==========================================${NC}"
-echo -e "${CYAN}接下来可以直接开始首次配置，不需要你自己再记命令。${NC}"
+echo -e "${CYAN}接下来可以直接开始首次配置（openclaw onboard）。${NC}"
 
 if [ ! -r /dev/tty ] || [ ! -w /dev/tty ]; then
   echo "当前不是交互终端，已跳过首次配置引导。"
