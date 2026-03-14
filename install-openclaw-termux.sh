@@ -11,6 +11,7 @@
 #   --dry-run, -d    Dry run mode (simulate execution without making changes)
 #   --uninstall, -u  Uninstall Openclaw and clean up configurations
 #   --update, -U     Force update Openclaw to latest version without prompting
+#   --version, -V    Specify Openclaw version to install (e.g., --version 1.2.3)
 #
 # Examples:
 #   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh
@@ -18,6 +19,8 @@
 #   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh --dry-run
 #   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh --uninstall
 #   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh --update
+#   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh --version 1.2.3
+#   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh -V 1.2.3
 #
 # Note: For direct local execution, use: source install-openclaw-termux.sh [options]
 #
@@ -35,6 +38,7 @@ VERBOSE=0
 DRY_RUN=0
 UNINSTALL=0
 FORCE_UPDATE=0
+TARGET_VERSION=""
 while [[ $# -gt 0 ]]; do
     case $1 in
         --verbose|-v)
@@ -53,6 +57,15 @@ while [[ $# -gt 0 ]]; do
             FORCE_UPDATE=1
             shift
             ;;
+        --version|-V)
+            TARGET_VERSION="$2"
+            if [ -z "$TARGET_VERSION" ]; then
+                echo "错误: --version 需要指定版本号"
+                echo "用法: $0 --version <版本号>"
+                exit 1
+            fi
+            shift 2
+            ;;
         --help|-h)
             echo "用法: source $0 [选项]"
             echo "选项:"
@@ -60,6 +73,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --dry-run, -d    模拟运行，不执行实际命令"
             echo "  --uninstall, -u  卸载 Openclaw 和相关配置"
             echo "  --update, -U     强制更新到最新版本"
+            echo "  --version, -V    指定 Openclaw 版本号（如 1.2.3）"
             echo "  --help, -h       显示此帮助信息"
             echo ""
             echo "注意: 建议使用 source 方式执行，以便别名（ocr-重启、ockill-强制关闭、oclog-查看日志）立即生效"
@@ -173,7 +187,13 @@ check_deps() {
 
     # 检查是否需要更新 pkg
     UPDATE_FLAG="$HOME/.pkg_last_update"
-    if [ ! -f "$UPDATE_FLAG" ] || [ $(($(date +%s) - $(stat -c %Y "$UPDATE_FLAG" 2>/dev/null || echo 0))) -gt 86400 ]; then
+    # 获取文件修改时间（兼容 GNU stat 和 BSD stat）
+    if stat --version &>/dev/null; then
+        FILE_MTIME=$(stat -c %Y "$UPDATE_FLAG" 2>/dev/null || echo 0)
+    else
+        FILE_MTIME=$(stat -f %m "$UPDATE_FLAG" 2>/dev/null || echo 0)
+    fi
+    if [ ! -f "$UPDATE_FLAG" ] || [ $(($(date +%s) - FILE_MTIME)) -gt 86400 ]; then
         log "执行 pkg update"
         echo -e "${YELLOW}更新包列表...${NC}"
         run_cmd pkg update -y
@@ -345,7 +365,10 @@ configure_npm() {
     echo -e "${GREEN}✓ GYP 配置完成${NC}"
 
     # 检查并安装/更新 Openclaw
-    TARGET_VERSION="latest"  # 指定安装版本
+    # 如果用户未指定版本，默认使用 latest
+    if [ -z "$TARGET_VERSION" ]; then
+        TARGET_VERSION="latest"
+    fi
     INSTALLED_VERSION=""
     LATEST_VERSION=""
     NEED_UPDATE=0
@@ -372,14 +395,53 @@ configure_npm() {
         else
             echo -e "${BLUE}最新版本: $LATEST_VERSION${NC}"
 
-            # 简单版本比较
-            if [ "$INSTALLED_VERSION" != "$LATEST_VERSION" ]; then
-                log "发现新版本: $LATEST_VERSION (当前: $INSTALLED_VERSION)"
-                echo -e "${YELLOW}🔔 发现新版本: $LATEST_VERSION (当前: $INSTALLED_VERSION)${NC}"
+            # 判断是否需要更新（用户指定版本 或 检查最新版本）
+            NEED_UPDATE=0
+            if [ "$TARGET_VERSION" != "latest" ]; then
+                # 用户指定了特定版本
+                if [ "$INSTALLED_VERSION" != "$TARGET_VERSION" ]; then
+                    # 比较版本确定是升级还是降级（使用兼容性更好的方法）
+                    compare_versions() {
+                        local v1="$1" v2="$2"
+                        local IFS='.'
+                        local i ver1=($v1) ver2=($v2)
+                        for ((i=0; i<${#ver1[@]} || i<${#ver2[@]}; i++)); do
+                            local n1=${ver1[i]:-0} n2=${ver2[i]:-0}
+                            n1=${n1%%[^0-9]*} n2=${n2%%[^0-9]*}
+                            if [[ $n1 -gt $n2 ]]; then return 1; fi
+                            if [[ $n1 -lt $n2 ]]; then return 2; fi
+                        done
+                        return 0
+                    }
+                    compare_versions "$INSTALLED_VERSION" "$TARGET_VERSION"
+                    cmp_result=$?
+                    if [ $cmp_result -eq 1 ]; then
+                        # v1 > v2 = 当前版本 > 目标版本 = 降级
+                        log "降级到指定版本: $TARGET_VERSION (当前: $INSTALLED_VERSION)"
+                        echo -e "${YELLOW}🔄 降级到指定版本: $TARGET_VERSION (当前: $INSTALLED_VERSION)${NC}"
+                    else
+                        # v1 < v2 = 当前版本 < 目标版本 = 升级
+                        log "升级到指定版本: $TARGET_VERSION (当前: $INSTALLED_VERSION)"
+                        echo -e "${YELLOW}🔔 升级到指定版本: $TARGET_VERSION (当前: $INSTALLED_VERSION)${NC}"
+                    fi
+                    NEED_UPDATE=1
+                else
+                    log "版本已是指定版本"
+                    echo -e "${GREEN}✅ Openclaw 已是指定版本 $INSTALLED_VERSION${NC}"
+                fi
+            else
+                # 用户未指定版本，默认检查最新版本
+                if [ "$INSTALLED_VERSION" != "$LATEST_VERSION" ]; then
+                    log "发现新版本: $LATEST_VERSION (当前: $INSTALLED_VERSION)"
+                    echo -e "${YELLOW}🔔 发现新版本: $LATEST_VERSION (当前: $INSTALLED_VERSION)${NC}"
+                    NEED_UPDATE=1
+                fi
+            fi
 
+            if [ $NEED_UPDATE -eq 1 ]; then
                 if [ $FORCE_UPDATE -eq 1 ]; then
                     log "强制更新模式，直接更新"
-                    echo -e "${YELLOW}正在更新 Openclaw...${NC}"
+                    echo -e "${YELLOW}正在更新 Openclaw 到 $TARGET_VERSION...${NC}"
                     # 使用 --ignore-scripts 跳过原生模块编译（koffi/clipboard 在 Termux 上无法编译）
                     run_cmd env NODE_LLAMA_CPP_SKIP_DOWNLOAD=true npm i -g openclaw@$TARGET_VERSION --ignore-scripts
                     if [ $? -ne 0 ]; then
@@ -391,12 +453,16 @@ configure_npm() {
                     INSTALLED_VERSION=$(npm list -g openclaw --depth=0 2>/dev/null | grep -oE 'openclaw@[0-9]+\.[0-9]+\.[0-9]+' | cut -d@ -f2)
                     echo -e "${GREEN}✅ Openclaw 已更新到 $INSTALLED_VERSION${NC}"
                 else
-                    read -p "是否更新到新版本? (y/n) [默认: y]: " UPDATE_CHOICE
+                    if [ "$TARGET_VERSION" != "latest" ]; then
+                        read -p "是否安装指定版本 $TARGET_VERSION? (y/n) [默认: y]: " UPDATE_CHOICE
+                    else
+                        read -p "是否更新到新版本? (y/n) [默认: y]: " UPDATE_CHOICE
+                    fi
                     UPDATE_CHOICE=${UPDATE_CHOICE:-y}
 
                     if [ "$UPDATE_CHOICE" = "y" ] || [ "$UPDATE_CHOICE" = "Y" ]; then
-                        log "开始更新 Openclaw"
-                        echo -e "${YELLOW}正在更新 Openclaw...${NC}"
+                        log "开始更新 Openclaw 到 $TARGET_VERSION"
+                        echo -e "${YELLOW}正在更新 Openclaw 到 $TARGET_VERSION...${NC}"
                         # 使用 --ignore-scripts 跳过原生模块编译（koffi/clipboard 在 Termux 上无法编译）
                         run_cmd env NODE_LLAMA_CPP_SKIP_DOWNLOAD=true npm i -g openclaw@$TARGET_VERSION --ignore-scripts
                         if [ $? -ne 0 ]; then
@@ -413,8 +479,10 @@ configure_npm() {
                     fi
                 fi
             else
-                log "版本已是最新"
-                echo -e "${GREEN}✅ Openclaw 已是最新版本 $INSTALLED_VERSION${NC}"
+                if [ "$TARGET_VERSION" = "latest" ]; then
+                    log "版本已是最新"
+                    echo -e "${GREEN}✅ Openclaw 已是最新版本 $INSTALLED_VERSION${NC}"
+                fi
             fi
         fi
     else

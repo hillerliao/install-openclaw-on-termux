@@ -11,6 +11,7 @@
 #   --dry-run, -d    Dry run mode (simulate execution without making changes)
 #   --uninstall, -u  Uninstall Openclaw and clean up configurations
 #   --update, -U     Force update Openclaw to latest version without prompting
+#   --version, -V    Specify Openclaw version to install (e.g., --version 1.2.3)
 #
 # Examples:
 #   curl -sL https://s.zhihai.me/openclaw_en > openclaw-install.sh && source openclaw-install.sh
@@ -18,6 +19,8 @@
 #   curl -sL https://s.zhihai.me/openclaw_en > openclaw-install.sh && source openclaw-install.sh --dry-run
 #   curl -sL https://s.zhihai.me/openclaw_en > openclaw-install.sh && source openclaw-install.sh --uninstall
 #   curl -sL https://s.zhihai.me/openclaw_en > openclaw-install.sh && source openclaw-install.sh --update
+#   curl -sL https://s.zhihai.me/openclaw_en > openclaw-install.sh && source openclaw-install.sh --version 1.2.3
+#   curl -sL https://s.zhihai.me/openclaw_en > openclaw-install.sh && source openclaw-install.sh -V 1.2.3
 #
 # Note: For direct local execution, use: source install-openclaw-termux.sh [options]
 #
@@ -35,6 +38,7 @@ VERBOSE=0
 DRY_RUN=0
 UNINSTALL=0
 FORCE_UPDATE=0
+TARGET_VERSION=""
 while [[ $# -gt 0 ]]; do
     case $1 in
         --verbose|-v)
@@ -53,6 +57,15 @@ while [[ $# -gt 0 ]]; do
             FORCE_UPDATE=1
             shift
             ;;
+        --version|-V)
+            TARGET_VERSION="$2"
+            if [ -z "$TARGET_VERSION" ]; then
+                echo "Error: --version requires a version number"
+                echo "Usage: $0 --version <version>"
+                exit 1
+            fi
+            shift 2
+            ;;
         --help|-h)
             echo "Usage: source $0 [options]"
             echo "Options:"
@@ -60,6 +73,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --dry-run, -d    Dry run mode, simulate without executing actual commands"
             echo "  --uninstall, -u  Uninstall Openclaw and related configurations"
             echo "  --update, -U     Force update to latest version"
+            echo "  --version, -V    Specify Openclaw version (e.g., 1.2.3)"
             echo "  --help, -h       Show this help message"
             echo ""
             echo "Note: It is recommended to use 'source' to execute, so that aliases (ocr-restart, ockill-force stop, oclog-view logs) take effect immediately"
@@ -173,7 +187,13 @@ check_deps() {
 
     # Check if pkg update is needed
     UPDATE_FLAG="$HOME/.pkg_last_update"
-    if [ ! -f "$UPDATE_FLAG" ] || [ $(($(date +%s) - $(stat -c %Y "$UPDATE_FLAG" 2>/dev/null || echo 0))) -gt 86400 ]; then
+    # Get file modification time (compatible with GNU stat and BSD stat)
+    if stat --version &>/dev/null; then
+        FILE_MTIME=$(stat -c %Y "$UPDATE_FLAG" 2>/dev/null || echo 0)
+    else
+        FILE_MTIME=$(stat -f %m "$UPDATE_FLAG" 2>/dev/null || echo 0)
+    fi
+    if [ ! -f "$UPDATE_FLAG" ] || [ $(($(date +%s) - FILE_MTIME)) -gt 86400 ]; then
         log "Executing pkg update"
         echo -e "${YELLOW}Updating package list...${NC}"
         run_cmd pkg update -y
@@ -304,6 +324,12 @@ configure_npm() {
     fi
     export PATH="$NPM_BIN:$PATH"
 
+    # Set Node.js memory limit (avoid memory issues with large model configurations)
+    if ! grep -q 'export NODE_OPTIONS="--max-old-space-size=2048"' "$BASHRC" 2>/dev/null; then
+        echo 'export NODE_OPTIONS="--max-old-space-size=2048"' >> "$BASHRC"
+    fi
+    export NODE_OPTIONS="--max-old-space-size=2048"
+
     # Create necessary directories before installation (Termux compatibility handling)
     log "Creating Termux compatibility directories"
     mkdir -p "$LOG_DIR" "$HOME/tmp"
@@ -329,7 +355,10 @@ configure_npm() {
     echo -e "${GREEN}✓ GYP configuration completed${NC}"
 
     # Check and install/update Openclaw
-    TARGET_VERSION="latest"  # Specify installation version
+    # If user didn't specify version, default to latest
+    if [ -z "$TARGET_VERSION" ]; then
+        TARGET_VERSION="latest"
+    fi
     INSTALLED_VERSION=""
     LATEST_VERSION=""
     NEED_UPDATE=0
@@ -356,14 +385,53 @@ configure_npm() {
         else
             echo -e "${BLUE}Latest version: $LATEST_VERSION${NC}"
 
-            # Simple version comparison
-            if [ "$INSTALLED_VERSION" != "$LATEST_VERSION" ]; then
-                log "New version found: $LATEST_VERSION (current: $INSTALLED_VERSION)"
-                echo -e "${YELLOW}🔔 New version found: $LATEST_VERSION (current: $INSTALLED_VERSION)${NC}"
+            # Determine if update is needed (user specified version or check latest)
+            NEED_UPDATE=0
+            if [ "$TARGET_VERSION" != "latest" ]; then
+                # User specified a specific version
+                if [ "$INSTALLED_VERSION" != "$TARGET_VERSION" ]; then
+                    # Compare versions to determine upgrade or downgrade (compatible method)
+                    compare_versions() {
+                        local v1="$1" v2="$2"
+                        local IFS='.'
+                        local i ver1=($v1) ver2=($v2)
+                        for ((i=0; i<${#ver1[@]} || i<${#ver2[@]}; i++)); do
+                            local n1=${ver1[i]:-0} n2=${ver2[i]:-0}
+                            n1=${n1%%[^0-9]*} n2=${n2%%[^0-9]*}
+                            if [[ $n1 -gt $n2 ]]; then return 1; fi
+                            if [[ $n1 -lt $n2 ]]; then return 2; fi
+                        done
+                        return 0
+                    }
+                    compare_versions "$INSTALLED_VERSION" "$TARGET_VERSION"
+                    cmp_result=$?
+                    if [ $cmp_result -eq 1 ]; then
+                        # v1 > v2 = current > target = downgrade
+                        log "Downgrade to specified version: $TARGET_VERSION (current: $INSTALLED_VERSION)"
+                        echo -e "${YELLOW}🔄 Downgrade to specified version: $TARGET_VERSION (current: $INSTALLED_VERSION)${NC}"
+                    else
+                        # v1 < v2 = current < target = upgrade
+                        log "Upgrade to specified version: $TARGET_VERSION (current: $INSTALLED_VERSION)"
+                        echo -e "${YELLOW}🔔 Upgrade to specified version: $TARGET_VERSION (current: $INSTALLED_VERSION)${NC}"
+                    fi
+                    NEED_UPDATE=1
+                else
+                    log "Version is already the specified version"
+                    echo -e "${GREEN}✅ Openclaw is already the specified version $INSTALLED_VERSION${NC}"
+                fi
+            else
+                # User didn't specify version, default to checking latest
+                if [ "$INSTALLED_VERSION" != "$LATEST_VERSION" ]; then
+                    log "New version found: $LATEST_VERSION (current: $INSTALLED_VERSION)"
+                    echo -e "${YELLOW}🔔 New version found: $LATEST_VERSION (current: $INSTALLED_VERSION)${NC}"
+                    NEED_UPDATE=1
+                fi
+            fi
 
+            if [ $NEED_UPDATE -eq 1 ]; then
                 if [ $FORCE_UPDATE -eq 1 ]; then
                     log "Force update mode, updating directly"
-                    echo -e "${YELLOW}Updating Openclaw...${NC}"
+                    echo -e "${YELLOW}Updating Openclaw to $TARGET_VERSION...${NC}"
                     # Use --ignore-scripts to skip native module compilation (koffi/clipboard cannot compile on Termux)
                     run_cmd env NODE_LLAMA_CPP_SKIP_DOWNLOAD=true npm i -g openclaw@$TARGET_VERSION --ignore-scripts
                     if [ $? -ne 0 ]; then
@@ -375,12 +443,16 @@ configure_npm() {
                     INSTALLED_VERSION=$(npm list -g openclaw --depth=0 2>/dev/null | grep -oE 'openclaw@[0-9]+\.[0-9]+\.[0-9]+' | cut -d@ -f2)
                     echo -e "${GREEN}✅ Openclaw updated to $INSTALLED_VERSION${NC}"
                 else
-                    read -p "Update to new version? (y/n) [default: y]: " UPDATE_CHOICE
+                    if [ "$TARGET_VERSION" != "latest" ]; then
+                        read -p "Install specified version $TARGET_VERSION? (y/n) [default: y]: " UPDATE_CHOICE
+                    else
+                        read -p "Update to new version? (y/n) [default: y]: " UPDATE_CHOICE
+                    fi
                     UPDATE_CHOICE=${UPDATE_CHOICE:-y}
 
                     if [ "$UPDATE_CHOICE" = "y" ] || [ "$UPDATE_CHOICE" = "Y" ]; then
-                        log "Starting Openclaw update"
-                        echo -e "${YELLOW}Updating Openclaw...${NC}"
+                        log "Starting Openclaw update to $TARGET_VERSION"
+                        echo -e "${YELLOW}Updating Openclaw to $TARGET_VERSION...${NC}"
                         # Use --ignore-scripts to skip native module compilation (koffi/clipboard cannot compile on Termux)
                         run_cmd env NODE_LLAMA_CPP_SKIP_DOWNLOAD=true npm i -g openclaw@$TARGET_VERSION --ignore-scripts
                         if [ $? -ne 0 ]; then
@@ -397,8 +469,10 @@ configure_npm() {
                     fi
                 fi
             else
-                log "Version is already up to date"
-                echo -e "${GREEN}✅ Openclaw is already the latest version $INSTALLED_VERSION${NC}"
+                if [ "$TARGET_VERSION" = "latest" ]; then
+                    log "Version is already up to date"
+                    echo -e "${GREEN}✅ Openclaw is already the latest version $INSTALLED_VERSION${NC}"
+                fi
             fi
         fi
     else

@@ -20,6 +20,8 @@ UNINSTALL=0
 FORCE_UPDATE=0
 SHOW_HELP=0
 NON_INTERACTIVE=0
+LIST_VERSIONS=0
+OPENCLAW_SPECIFIC_VERSION=""
 
 DEFAULT_PORT=18789
 DEFAULT_AUTO_START="y"
@@ -112,16 +114,18 @@ show_help() {
   卸载会清理 v2 受管 shell 配置、env.sh、OpenClaw 全局包、运行日志与 openclaw.json（删除前会先备份）。
 
 选项:
-  --help, -h       显示帮助
-  --verbose, -v    启用详细输出
-  --dry-run, -d    模拟运行
-  --uninstall, -u  卸载 OpenClaw 与 v2 受管配置
-  --update, -U     强制更新已安装的 OpenClaw
-  --yes            非交互模式，使用默认值
-  --port <port>    指定 Gateway 端口
-  --token <token>  指定 Gateway Token
-  --auto-start     启用自启动
-  --no-auto-start  禁用自启动
+  --help, -h           显示帮助
+  --verbose, -v       启用详细输出
+  --dry-run, -d       模拟运行
+  --uninstall, -u     卸载 OpenClaw 与 v2 受管配置
+  --update, -U        强制更新已安装的 OpenClaw
+  --version, -V <ver> 指定 OpenClaw 版本（如 1.0.0）
+  --list-versions     列出所有可用的 OpenClaw 版本
+  --yes               非交互模式，使用默认值
+  --port <port>       指定 Gateway 端口
+  --token <token>     指定 Gateway Token
+  --auto-start        启用自启动
+  --no-auto-start     禁用自启动
 EOF
 }
 
@@ -466,10 +470,31 @@ get_openclaw_latest_version() {
     npm view "$OPENCLAW_PACKAGE" version 2>/dev/null || true
 }
 
+list_openclaw_versions() {
+    info "获取 OpenClaw 可用版本列表..."
+    local versions
+    versions=$(npm view "$OPENCLAW_PACKAGE" versions --json 2>/dev/null)
+    if [ -z "$versions" ]; then
+        die "无法获取版本列表，请检查网络连接"
+        return $?
+    fi
+    echo "$versions" | node -e "
+const versions = JSON.parse(require('fs').readFileSync(0, 'utf8'));
+versions.forEach((v, i) => {
+    console.log('  ' + v);
+});
+"
+    success "共 $(echo "$versions" | node -e 'console.log(JSON.parse(require(\"fs\").readFileSync(0, \"utf8\")).length)') 个版本"
+}
+
 install_openclaw_package() {
     log "安装/更新 OpenClaw 包"
     OPENCLAW_INSTALL_PENDING=1
-    run_cmd env NODE_LLAMA_CPP_SKIP_DOWNLOAD=true npm i -g "${OPENCLAW_PACKAGE}@${OPENCLAW_TARGET_VERSION}" --ignore-scripts || {
+    local install_version="$OPENCLAW_TARGET_VERSION"
+    if [ -n "$OPENCLAW_SPECIFIC_VERSION" ]; then
+        install_version="$OPENCLAW_SPECIFIC_VERSION"
+    fi
+    run_cmd env NODE_LLAMA_CPP_SKIP_DOWNLOAD=true npm i -g "${OPENCLAW_PACKAGE}@${install_version}" --ignore-scripts || {
         die "OpenClaw 安装/更新失败"
         return $?
     }
@@ -511,6 +536,16 @@ maybe_update_existing_openclaw() {
     local latest_version="$2"
     local update_choice="n"
 
+    # 如果用户指定了具体版本，直接安装
+    if [ -n "$OPENCLAW_SPECIFIC_VERSION" ]; then
+        info "指定版本: $OPENCLAW_SPECIFIC_VERSION"
+        if [ -n "$installed_version" ] && [ "$installed_version" != "$OPENCLAW_SPECIFIC_VERSION" ]; then
+            warn "⚠️  版本降级: ${installed_version} -> $OPENCLAW_SPECIFIC_VERSION"
+        fi
+        install_openclaw_package || return $?
+        return 0
+    fi
+
     if [ -z "$latest_version" ]; then
         warn "无法获取 OpenClaw 最新版本信息，保留当前版本：${installed_version:-unknown}"
         return 0
@@ -522,6 +557,11 @@ maybe_update_existing_openclaw() {
     if [ -n "$installed_version" ] && [ "$installed_version" = "$latest_version" ] && [ "$FORCE_UPDATE" -eq 0 ]; then
         success "✅ OpenClaw 已是最新版本 $installed_version"
         return 0
+    fi
+
+    # 检测版本降级情况
+    if [ -n "$installed_version" ] && [ "$FORCE_UPDATE" -eq 0 ]; then
+        warn "⚠️  检测到版本变更"
     fi
 
     if [ "$FORCE_UPDATE" -eq 1 ]; then
@@ -946,6 +986,17 @@ parse_args() {
                 ;;
             --no-auto-start)
                 AUTO_START="n"
+                ;;
+            --version|-V)
+                shift
+                [ $# -gt 0 ] || { die "--version 需要一个参数"; return $?; }
+                OPENCLAW_SPECIFIC_VERSION="$1"
+                ;;
+            --version=*|-V=*)
+                OPENCLAW_SPECIFIC_VERSION="${1#*=}"
+                ;;
+            --list-versions)
+                LIST_VERSIONS=1
                 ;;
             *)
                 die "未知选项: $1"
@@ -1534,6 +1585,11 @@ main() {
 
     if [ "$SHOW_HELP" -eq 1 ]; then
         show_help
+        return 0
+    fi
+
+    if [ "$LIST_VERSIONS" -eq 1 ]; then
+        list_openclaw_versions
         return 0
     fi
 
