@@ -19,8 +19,8 @@
 #   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh --dry-run
 #   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh --uninstall
 #   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh --update
-#   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh --version 1.2.3
-#   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh -V 1.2.3
+#   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh --version 2026.2.26
+#   curl -sL https://s.zhihai.me/openclaw > openclaw-install.sh && source openclaw-install.sh -V 2026.2.26
 #
 # Note: For direct local execution, use: source install-openclaw-termux.sh [options]
 #
@@ -73,7 +73,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --dry-run, -d    模拟运行，不执行实际命令"
             echo "  --uninstall, -u  卸载 Openclaw 和相关配置"
             echo "  --update, -U     强制更新到最新版本"
-            echo "  --version, -V    指定 Openclaw 版本号（如 1.2.3）"
+            echo "  --version, -V    指定 Openclaw 版本号（如 2026.2.26）"
             echo "  --help, -h       显示此帮助信息"
             echo ""
             echo "注意: 建议使用 source 方式执行，以便别名（ocr-重启、ockill-强制关闭、oclog-查看日志）立即生效"

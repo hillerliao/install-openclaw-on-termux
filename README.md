@@ -159,7 +159,7 @@ source install-openclaw-termux.sh [选项]
 | `--verbose` | `-v` | 启用详细输出，显示每个执行的命令 |
 | `--dry-run` | `-d` | 模拟运行模式，不执行实际命令（用于测试） |
 | `--uninstall` | `-u` | 卸载 Openclaw 并清理配置 |
-| `--version` | `-V` | 指定 Openclaw 版本（如 1.2.3），支持降级到旧版本 |
+| `--version` | `-V` | 指定 Openclaw 版本（如 2026.2.26），支持降级到旧版本 |
 
 ### 使用示例
 
@@ -177,7 +177,7 @@ source install-openclaw-termux.sh --dry-run
 source install-openclaw-termux.sh --uninstall
 
 # 安装指定版本（如需降级到旧版本）
-source install-openclaw-termux.sh --version 1.2.3
+source install-openclaw-termux.sh --version 2026.2.26
 
 # 组合使用
 source install-openclaw-termux.sh -v -d  # 详细模式 + 模拟运行

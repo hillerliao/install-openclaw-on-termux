@@ -11,7 +11,7 @@
 #   --dry-run, -d    Dry run mode (simulate execution without making changes)
 #   --uninstall, -u  Uninstall Openclaw and clean up configurations
 #   --update, -U     Force update Openclaw to latest version without prompting
-#   --version, -V    Specify Openclaw version to install (e.g., --version 1.2.3)
+#   --version, -V    Specify Openclaw version to install (e.g., --version 2026.2.26)
 #
 # Examples:
 #   curl -sL https://s.zhihai.me/openclaw_en > openclaw-install.sh && source openclaw-install.sh
@@ -19,8 +19,8 @@
 #   curl -sL https://s.zhihai.me/openclaw_en > openclaw-install.sh && source openclaw-install.sh --dry-run
 #   curl -sL https://s.zhihai.me/openclaw_en > openclaw-install.sh && source openclaw-install.sh --uninstall
 #   curl -sL https://s.zhihai.me/openclaw_en > openclaw-install.sh && source openclaw-install.sh --update
-#   curl -sL https://s.zhihai.me/openclaw_en > openclaw-install.sh && source openclaw-install.sh --version 1.2.3
-#   curl -sL https://s.zhihai.me/openclaw_en > openclaw-install.sh && source openclaw-install.sh -V 1.2.3
+#   curl -sL https://s.zhihai.me/openclaw_en > openclaw-install.sh && source openclaw-install.sh --version 2026.2.26
+#   curl -sL https://s.zhihai.me/openclaw_en > openclaw-install.sh && source openclaw-install.sh -V 2026.2.26
 #
 # Note: For direct local execution, use: source install-openclaw-termux.sh [options]
 #
@@ -73,7 +73,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --dry-run, -d    Dry run mode, simulate without executing actual commands"
             echo "  --uninstall, -u  Uninstall Openclaw and related configurations"
             echo "  --update, -U     Force update to latest version"
-            echo "  --version, -V    Specify Openclaw version (e.g., 1.2.3)"
+            echo "  --version, -V    Specify Openclaw version (e.g., 2026.2.26)"
             echo "  --help, -h       Show this help message"
             echo ""
             echo "Note: It is recommended to use 'source' to execute, so that aliases (ocr-restart, ockill-force stop, oclog-view logs) take effect immediately"

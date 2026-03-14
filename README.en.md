@@ -154,7 +154,7 @@ source install-openclaw-termux.sh [options]
 | `--verbose` | `-v` | Enable verbose output, display each executed command |
 | `--dry-run` | `-d` | Simulation mode, do not execute actual commands (for testing) |
 | `--uninstall` | `-u` | Uninstall Openclaw and clean up configuration |
-| `--version` | `-V` | Specify Openclaw version (e.g., 1.2.3), supports downgrading to older versions |
+| `--version` | `-V` | Specify Openclaw version (e.g., 2026.2.26), supports downgrading to older versions |
 
 ### Usage Examples
 
@@ -172,7 +172,7 @@ source install-openclaw-termux.sh --dry-run
 source install-openclaw-termux.sh --uninstall
 
 # Install specific version (e.g., downgrade to older version)
-source install-openclaw-termux.sh --version 1.2.3
+source install-openclaw-termux.sh --version 2026.2.26
 
 # Combined usage
 source install-openclaw-termux.sh -v -d  # Verbose mode + dry run
